@@ -20,5 +20,32 @@
   "next_target": {
     "skill_id": "follow-up-questions",
     "reason": "The real-world attempt revealed a listening gap during an unexpected follow-up question."
-  }
+  },
+  "word_evidence": [
+    {
+      "word_id": "quiero",
+      "outcome": "used_correctly",
+      "evidence": "Learner ordered food in Spanish using 'quiero'."
+    },
+    {
+      "word_id": "el-agua",
+      "outcome": "used_correctly",
+      "evidence": "Learner asked for water in Spanish."
+    },
+    {
+      "word_id": "la-salsa",
+      "outcome": "not_understood",
+      "evidence": "Learner could not understand the salsa-choice question."
+    },
+    {
+      "word_id": "roja",
+      "outcome": "not_understood",
+      "evidence": "Learner did not recognize 'red' in the salsa question."
+    },
+    {
+      "word_id": "verde",
+      "outcome": "not_understood",
+      "evidence": "Learner did not recognize 'green' in the salsa question."
+    }
+  ]
 }

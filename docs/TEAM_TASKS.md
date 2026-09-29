@@ -1,5 +1,7 @@
 # One-hour team plan
 
+**BAND, PLAUD and Neo4j are integrated on `feat/neo4j-band-integration`.** See [BAND_PLAUD.md](BAND_PLAUD.md) for startup and remaining Aura/account/device acceptance. The original assignments below are historical team reference.
+
 ## Before splitting — minutes 0–5
 
 Integrator shares this repo, assigns people, and runs `make setup`. Everyone agrees to [API.md](../contracts/API.md).
