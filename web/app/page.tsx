@@ -61,8 +61,15 @@ export default function Home() {
       {mission?.status === 'assigned' && <section className="next-target" aria-label="Practice invitation" aria-live="polite">
         <span>↗ A PRACTICE OPPORTUNITY FOR YOU</span><h2>{mission.title}</h2><p>{mission.challenge}</p>
         <p>{mission.reason}</p>
+        <p>Record with PLAUD, sync and generate the transcript, and ApplyLoop will update your progress and suggest the next opportunity.</p>
         <button aria-expanded={practiceMission === mission.id} aria-controls="practice-steps" onClick={() => setPracticeMission(mission.id)}>{practiceMission === mission.id ? 'Practice steps ready' : 'Start practice ↗'}</button>
-        {practiceMission === mission.id && <div id="practice-steps"><h3>Try this in your next conversation</h3><ol><li>Start a new recording in PLAUD.</li><li>Try the challenge above in {state.context.title}.</li><li>Stop recording, sync it, and generate the transcript in PLAUD.</li></ol><p>When your PLAUD transcript is ready, ApplyLoop will check relevant evidence, update your progress, and suggest the next opportunity.</p></div>}
+        {practiceMission === mission.id && <div id="practice-steps"><h3>Your practice flow</h3><ol>
+          <li><strong>Start practice</strong> — follow the suggested challenge in {state.context.title}.</li>
+          <li><strong>Record with PLAUD</strong> — start a new recording to capture your conversation.</li>
+          <li><strong>Sync and generate the transcript</strong> — stop recording, sync it, and generate its transcript in PLAUD.</li>
+          <li><strong>Progress updates automatically</strong> — ApplyLoop checks relevant evidence and updates your skills and vocabulary.</li>
+          <li><strong>Get the next opportunity</strong> — based on your updated progress and saved context.</li>
+        </ol></div>}
       </section>}
       <div className="top-grid">
         <section className="card"><p className="eyebrow">YOUR LEARNING STATE</p><h2>{state.goal}</h2>{state.skills.map(skill => <div className="skill" key={skill.id}><h3>{skill.name}</h3><div className="metric"><span>Knowledge</span><progress max="1" value={skill.knowledge_score} aria-label={`${skill.name} knowledge`} /><b>{percent(skill.knowledge_score)}</b></div><div className="metric application"><span>Application</span><progress max="1" value={skill.application_score} aria-label={`${skill.name} application`} /><b>{percent(skill.application_score)}</b></div></div>)}</section>
