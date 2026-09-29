@@ -221,12 +221,12 @@ class Watcher:
             try:
                 # Registration retries assert the original mission; never bind to a later one.
                 self.backend.register(rid, pending.title, pending.mission_id)
-                self.backend.notify('transcript_waiting', 'Waiting for PLAUD transcript')
                 pending.attempts += 1
                 pending.next_attempt = time.time() + self.retry_seconds
                 self.save()
                 text = read_transcript(rid)
                 if text is None:
+                    self.backend.notify('transcript_waiting', 'Waiting for PLAUD transcript; generate transcription in PLAUD and sync it to the cloud')
                     if pending.attempts >= self.max_attempts:
                         pending.exhausted = True
                         self.backend.notify('error', 'PLAUD transcript retry limit reached; use make plaud-retry after transcription is ready')
@@ -241,6 +241,12 @@ class Watcher:
                 raise
             except (RuntimeError, ValueError, httpx.HTTPError) as exc:
                 pending.next_attempt = time.time() + self.retry_seconds
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 409:
+                    # A completed/changed mission cannot accept this recording. Retain it for review.
+                    pending.exhausted = True
+                    self.save()
+                    self.backend.notify('waiting', 'PLAUD connected; an additional recording is retained for a completed or changed mission. Review before retrying.')
+                    continue
                 # A ready transcript may be retried indefinitely on backend delivery failures.
                 if not isinstance(exc, httpx.HTTPError) and pending.attempts >= self.max_attempts:
                     pending.exhausted = True

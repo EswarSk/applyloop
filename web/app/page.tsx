@@ -12,7 +12,7 @@ export default function Home() {
   const [state, setState] = useState<State | null>(null);
   const [graph, setGraph] = useState<Graph>({ nodes: [], edges: [] });
   const [events, setEvents] = useState<Activity[]>([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<{ message: string; stage?: string } | null>(null);
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const refresh = useCallback(async () => {
@@ -20,23 +20,24 @@ export default function Home() {
     setState(s); setGraph(g);
   }, []);
   useEffect(() => {
-    refresh().catch(e => setError(e.message));
+    refresh().catch(e => setError({ message: e.message }));
     const source = new EventSource(`${API}/api/events`);
-    source.onopen = () => { setConnected(true); refresh().catch(e => setError(e.message)); };
+    source.onopen = () => { setConnected(true); refresh().catch(e => setError({ message: e.message })); };
     source.onerror = () => setConnected(false);
     source.onmessage = ({ data }) => {
       const event: Activity = JSON.parse(data);
       setEvents(previous => event.data.reset ? [event] : [...previous.filter(e => e.id !== event.id), event].slice(-100));
-      if (event.type === 'error') setError(event.message);
-      if (['mission.created', 'graph.updated'].includes(event.type)) setError('');
-      if (['context.added', 'mission.created', 'graph.updated', 'learning_path.adapted', 'plaud.waiting', 'plaud.recording.detected', 'plaud.transcript.waiting', 'error'].includes(event.type)) refresh().catch(e => setError(e.message));
+      if (event.type === 'error') setError({ message: event.message, stage: event.stage });
+      else setError(previous => previous?.stage === event.stage ? null : previous);
+      if (['mission.created', 'graph.updated'].includes(event.type)) setError(null);
+      if (['context.added', 'mission.created', 'graph.updated', 'learning_path.adapted', 'plaud.waiting', 'plaud.recording.detected', 'plaud.transcript.waiting', 'error'].includes(event.type)) refresh().catch(e => setError({ message: e.message }));
     };
     return () => source.close();
   }, [refresh]);
   async function action(path: string) {
-    setBusy(true); setError('');
+    setBusy(true); setError(null);
     try { await request(path, 'POST'); await refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); }
+    catch (e) { setError({ message: e instanceof Error ? e.message : 'Request failed' }); }
     finally { setBusy(false); }
   }
   const nodes = useMemo(() => graph.nodes.map((node, index) => ({
@@ -50,7 +51,7 @@ export default function Home() {
   return <main>
     <header><div><p className="eyebrow">LEARN. APPLY. ADAPT.</p><h1>ApplyLoop<span>↗</span></h1><p>Turn knowledge into real-world experience.</p></div><button disabled={busy} onClick={() => action('/api/demo/reset')}>Reset demo</button></header>
     <div className="banner"><span>{services?.band === 'live' ? 'LIVE BAND AGENTS' : 'DEMO AGENTS'}</span> {services?.storage === 'neo4j' ? 'Neo4j graph' : 'In-memory demo graph'} · {services?.plaud === 'connected' ? 'PLAUD bridge connected' : 'PLAUD bridge disconnected'} <b className={connected ? 'online' : 'offline'}>{connected ? '● Live event stream' : '○ Connecting to backend…'}</b></div>
-    {error && <p className="error" role="alert">{error}</p>}
+    {error && <p className="error" role="alert">{error.message}</p>}
     {!state ? <section className="card"><h2>Connecting to ApplyLoop</h2><p>Start the backend with <code>make api</code> and this screen will connect automatically.</p></section> : <>
       <div className="top-grid">
         <section className="card"><p className="eyebrow">YOUR LEARNING STATE</p><h2>{state.goal}</h2>{state.skills.map(skill => <div className="skill" key={skill.id}><h3>{skill.name}</h3><div className="metric"><span>Knowledge</span><progress max="1" value={skill.knowledge_score} aria-label={`${skill.name} knowledge`} /><b>{percent(skill.knowledge_score)}</b></div><div className="metric application"><span>Application</span><progress max="1" value={skill.application_score} aria-label={`${skill.name} application`} /><b>{percent(skill.application_score)}</b></div></div>)}</section>

@@ -16,7 +16,7 @@ from band.runtime.tools import AgentTools
 
 from server import band_client, main, plaud_bridge as bridge
 from server.agents.opportunity_agent import live_opportunity
-from server.agents.reflection_agent import live_reflection
+from server.agents.reflection_agent import live_reflection, transcript_excerpts
 from server.agents.model import strict_schema
 from server.demo_seed import example, SAMPLE_TRANSCRIPT
 from server.settings import INTERNAL_API_TOKEN
@@ -34,6 +34,11 @@ def reflection_result(payload):
     result.update(mission_id=payload['mission']['id'], recording_id=payload['recording_id'])
     result['demonstrated'][0]['evidence'] = 'I ordered my food and asked for water in Spanish.'
     result['gaps'][0]['evidence'] = 'I could not understand the question and switched to English.'
+    excerpts = payload['transcript'] if isinstance(payload['transcript'], list) else [
+        {'evidence_id': i, 'text': text} for i, text in enumerate(transcript_excerpts(payload['transcript']))]
+    for item in result['demonstrated'] + result['gaps']:
+        quote = item.pop('evidence')
+        item['evidence_id'] = next(e['evidence_id'] for e in excerpts if quote in e['text'])
     return result
 
 
@@ -133,7 +138,7 @@ class AgentProof(unittest.IsolatedAsyncioTestCase):
             for mutate in (lambda r: r.update(recording_id='wrong'),
                            lambda r: r.update(success_score=1.1),
                            lambda r: r['next_target'].update(skill_id='unknown'),
-                           lambda r: r['demonstrated'][0].update(evidence='fabricated quote')):
+                           lambda r: r['demonstrated'][0].update(evidence_id=999999)):
                 result = reflection_result(payload); mutate(result)
                 async with httpx.AsyncClient(transport=httpx.MockTransport(lambda req: httpx.Response(200,
                         json={'choices': [{'message': {'content': json.dumps(result)}}]}))) as client:
@@ -152,6 +157,46 @@ class AgentProof(unittest.IsolatedAsyncioTestCase):
         schema = strict_schema(Mission.model_json_schema())
         self.assertEqual(set(schema['required']), set(schema['properties']))
         self.assertNotIn('default', schema['properties']['status'])
+
+    async def test_insufficient_transcript_allows_no_observations(self):
+        payload = {'mission': example('mission'), 'recording_id': 'test-recording',
+                   'transcript': '[00:00 - 00:03] Speaker 1: Testing the recorder.',
+                   'skills': example('state')['skills']}
+        result = {'mission_id': payload['mission']['id'], 'recording_id': payload['recording_id'],
+                  'success_score': 0, 'demonstrated': [], 'gaps': [],
+                  'next_target': {'skill_id': payload['mission']['skill_id'],
+                                  'reason': 'Record a relevant practice attempt.'}}
+        def respond(request):
+            prompt = json.loads(request.content)['messages'][0]['content']
+            self.assertIn('demonstrated=[] and gaps=[]', prompt)
+            return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps(result)}}]})
+        with patch.dict(os.environ, ENV):
+            async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+                reflection = await live_reflection(payload, client)
+        self.assertEqual(reflection.success_score, 0)
+        self.assertEqual(reflection.demonstrated + reflection.gaps, [])
+
+    async def test_multilingual_evidence_is_copied_from_source(self):
+        transcript = '[00:00 - 00:03] Speaker 1: मुझे समझ नहीं आया।'
+        payload = {'mission': example('mission'), 'recording_id': 'multilingual',
+                   'transcript': transcript, 'skills': example('state')['skills']}
+        result = {'mission_id': payload['mission']['id'], 'recording_id': payload['recording_id'],
+                  'success_score': .2, 'demonstrated': [], 'gaps': [{
+                      'skill_id': payload['mission']['skill_id'], 'name': 'Understanding the response',
+                      'evidence_id': 0, 'confidence': .8}],
+                  'next_target': {'skill_id': payload['mission']['skill_id'], 'reason': 'Practice listening.'}}
+        def respond(request):
+            body = json.loads(request.content)
+            self.assertEqual(json.loads(body['messages'][1]['content'])['transcript'], [
+                {'evidence_id': 0, 'text': transcript}])
+            return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps(result)}}]})
+        with patch.dict(os.environ, ENV):
+            async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+                reflection = await live_reflection(payload, client)
+        self.assertEqual(reflection.gaps[0].evidence, transcript)
+        long_line = 'अ' * 2100
+        self.assertEqual(''.join(transcript_excerpts(long_line)), long_line)
+        self.assertTrue(all(len(e) <= 2000 for e in transcript_excerpts(long_line)))
 
 
 def files_output(recordings, page=1):
@@ -247,7 +292,8 @@ class BridgeProof(unittest.TestCase):
     def test_exhaustion_corruption_and_failed_registration(self):
         with TemporaryDirectory() as directory, patch.dict(os.environ, {'PLAUD_TRANSCRIPT_MAX_ATTEMPTS': '1'}):
             path = Path(directory) / 'state.json'
-            backend = SimpleNamespace(notify=lambda *args: None, register=lambda *args: None,
+            notices = []
+            backend = SimpleNamespace(notify=lambda *args: notices.append(args), register=lambda *args: None,
                                       mission=lambda: {'id': 'mission', 'status': 'assigned'})
             with patch.object(bridge, 'list_recordings', return_value={}):
                 watcher = bridge.Watcher(path, backend); watcher.poll()
@@ -262,10 +308,26 @@ class BridgeProof(unittest.TestCase):
                     watcher.poll()
                 self.assertFalse(watcher.state.processed)
                 self.assertIn('new', bridge.Watcher(path, backend).state.pending)
+                self.assertTrue(watcher.state.pending['new'].exhausted)
+                self.assertEqual(notices[-1][0], 'waiting')
             path.write_text('{corrupt')
             with self.assertRaises(ValueError):
                 bridge.Watcher(path, backend)
             self.assertEqual(path.read_text(), '{corrupt')
+
+    def test_ready_transcript_does_not_report_waiting(self):
+        notices = []
+        backend = SimpleNamespace(notify=lambda *args: notices.append(args),
+                                  register=lambda *args: None, submit=lambda *args: None)
+        with TemporaryDirectory() as directory:
+            watcher = bridge.Watcher(Path(directory) / 'state.json', backend)
+            watcher.state = bridge.BridgeState(seen=['new'], pending={
+                'new': bridge.PendingRecording(title='Practice', mission_id='mission')})
+            with patch.object(bridge, 'list_recordings', return_value={}), \
+                    patch.object(bridge, 'read_transcript', return_value=SAMPLE_TRANSCRIPT):
+                watcher.poll()
+            self.assertEqual(watcher.state.processed, ['new'])
+            self.assertEqual([status for status, message in notices], ['waiting'])
 
 
 if __name__ == '__main__':

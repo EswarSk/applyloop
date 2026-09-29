@@ -1,6 +1,6 @@
 # BAND + PLAUD implementation and runbook
 
-Implemented on `feat/band-plaud`. Real account/device verification remains pending; automated checks use simulated vendor transport and make no network calls.
+Implemented on `feat/band-plaud`. Authenticated BAND and PLAUD transcript delivery were verified locally on September 29, 2026; durable Neo4j acceptance remains pending. Automated checks use simulated vendor transport and make no network calls.
 
 ## Completed plan
 
@@ -39,7 +39,7 @@ Start `make api` and `make web` in separate terminals. API startup connects both
 
 Click **Find opportunity**. BAND routes a request to the Opportunity agent. It selects a supplied skill/context and returns an assigned mission. The app, rather than the model, assigns the mission ID.
 
-The Reflection agent receives the registered mission, transcript, recording ID, and existing skills. It must quote the transcript for each demonstration/gap. Unknown references, mismatched IDs, nonfinite/out-of-range scores, fabricated evidence, refusals, and malformed results fail before any graph mutation.
+The Reflection agent receives the registered mission, transcript, recording ID, and existing skills. The model selects numbered transcript excerpts for demonstrations/gaps; the backend copies the original excerpts into the existing reflection contract. This preserves quotes across languages without asking the model to reproduce text or timestamps. Excerpts follow utterance/sentence boundaries, with long excerpts split at the existing 2,000-character evidence limit. Unsupported observations may be empty; missing evidence is never itself a skill gap. Unknown references, mismatched IDs, nonfinite/out-of-range scores, refusals, and malformed results fail before any graph mutation.
 
 The agents share the API process and its pending request registry. BAND carries correlated request/reply messages; full transcripts stay in the process and go to the model provider, while validated reflection quotes/results are visible in the BAND room. Human room messages cannot initiate a job or mutate the graph. No private model reasoning is posted. Splitting these agents onto different hosts would require a durable job transport; this implementation intentionally keeps the single-process architecture.
 
@@ -61,7 +61,7 @@ make plaud
 
 The **first run** saves all existing recording IDs as a baseline. Create an assigned mission in the UI, then record and sync a **new** recording with PLAUD. Keep recordings relevant to the mission; this single-learner app binds evidence to the mission active at discovery. Recordings discovered without an assigned mission are ignored.
 
-The watcher registers new evidence immediately, waits for a transcript, and submits it automatically. There is no upload or transcript-copy step. It uses paginated `plaud files`, including across midnight; `plaud today` only checks the latest 50 records. CLI output is parsed against the pinned renderer, with incomplete/unrecognized output rejected. `plaud transcript <id> --output <temporary file>` distinguishes actual transcript text from CLI readiness notices.
+The watcher registers new evidence immediately, waits for a transcript, and submits it automatically. It reports "Waiting for PLAUD transcript" only while the CLI actually has no transcript; reflection/delivery failures retain their error status. There is no upload or transcript-copy step. It uses paginated `plaud files`, including across midnight; `plaud today` only checks the latest 50 records. CLI output is parsed against the pinned renderer, with incomplete/unrecognized output rejected. `plaud transcript <id> --output <temporary file>` distinguishes actual transcript text from CLI readiness notices.
 
 State is stored atomically in `.plaud_bridge_state.json` with private file permissions. Pending work and completed IDs survive restart. A file lock prevents two watchers from using the same state file. Completion is recorded only after the backend returns `completed` or `duplicate`.
 
@@ -73,7 +73,7 @@ State is stored atomically in `.plaud_bridge_state.json` with private file permi
 | Retry limit reached | Pending recording is retained. Stop the watcher and run `make plaud-retry` once PLAUD finishes transcription. |
 | Network/BAND/backend failure | Pending delivery is retained and retried; successful backend mutations deduplicate by recording ID. |
 | Authentication failure | Watcher stops with a useful error. Run `plaud login` or fix the shared internal token, then restart. |
-| Mission changed/reset before delivery | Registration's `X-Expected-Mission-ID` check returns 409. Evidence stays pending and is never attached to the new mission. Inspect the old task; don't delete state to force reassignment. |
+| Mission completed/changed/reset before delivery | Registration returns 409. Evidence is retained and paused for review; the watcher stays connected for future recordings. It is never attached to a new mission. Inspect the old task before using `make plaud-retry`; don't delete state to force reassignment. |
 | API restarts with memory storage | The API loses missions/recording bindings; watcher persistence cannot restore them. Restart recovery across API restarts requires the teammate's durable Neo4j store. |
 | Corrupt or older bridge state | Startup fails without replacing the file. Preserve it for recovery; the supported schema is version 1. |
 | CLI output changes | Install the supported 0.3.14 version; the watcher refuses unfamiliar output. |
