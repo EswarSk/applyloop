@@ -26,7 +26,7 @@ Reset and run again. No external accounts or secrets are needed in demo mode.
 `make replay` also exercises the exact internal recording/transcript endpoints the real bridge will use.
 `make check` runs backend checks and TypeScript validation. `cd web && npm run build` checks the production frontend.
 Dependencies are pinned in `server/requirements.lock.txt` and `web/package-lock.json`.
-`make web` loads root `.env` with Node; Next.js exposes only `NEXT_PUBLIC_*` variables to the browser.
+`make web` loads root `.env` through Next’s installed `@next/env`; Next.js exposes only `NEXT_PUBLIC_*` variables to the browser.
 Backend OpenAPI documentation: http://localhost:8000/docs.
 
 ## Neo4j learner knowledge graph
