@@ -1,6 +1,6 @@
 # BAND + PLAUD implementation and runbook
 
-Integrated on `feat/neo4j-band-integration` with the Neo4j work from PR #2. Earlier authenticated BAND/PLAUD verification used memory storage. The combined flow now passes against real local Neo4j using simulated vendor transport; combined Aura/account/device verification awaits credentials.
+Integrated on `feat/neo4j-band-integration` with the Neo4j work from PR #2. Earlier authenticated BAND/PLAUD verification used memory storage. The combined flow now passes against real local Neo4j using simulated vendor transport; Aura, both BAND keys, model responses and PLAUD transcript access were authenticated locally. The active app uses the combined integration.
 
 ## Completed plan
 
@@ -86,7 +86,7 @@ State is stored atomically in `.plaud_bridge_state.json` with private file permi
 
 API startup verifies the store and required uniqueness constraints, initializes only an empty graph, then connects BAND. Shutdown closes both. Failed startup closes the driver and never silently falls back to memory. Changing `LEARNER_ID` on another learner's graph fails without resetting data.
 
-The recording body remains `{recording_id,title}`. `X-Expected-Mission-ID` asserts the existing binding or, for new evidence, the current mission. Atomic reflection updates save scores, vocabulary, evidence and next target together. Switching activities after completion retains history and prepares the next loop.
+The recording body remains `{recording_id,title}`. `X-Expected-Mission-ID` asserts the existing binding or, for new evidence, the current mission. Atomic reflection updates save scores, vocabulary, evidence and next target together. Each relevant reflection queues the next opportunity using saved activities, current word/level progress and feedback. Irrelevant recordings are acknowledged without creating an experience or ending the mission. The last relevant reflection is saved on the Experience for restart-safe feedback. HTTP 404 transcript retrievals are paused and retained for review rather than reported as recurring generic failures.
 
 ## Checks and real acceptance
 

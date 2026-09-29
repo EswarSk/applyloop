@@ -61,7 +61,7 @@ for the graph model and ready-to-paste Neo4j Browser queries for the pitch.
 3. Set `NEO4J_URI`, `NEO4J_PASSWORD`, and optionally `NEO4J_DATABASE`. Set `DEMO_MODE=false` to disable reset/replay controls and require persistent storage. Live BAND can also run with `DEMO_MODE=true` for local replay checks.
 4. Run `make plaud-install`, then `plaud login` in your terminal. Start `make api`, `make web`, and `make plaud` in three terminals.
 5. Choose an activity, click **Find opportunity**, then make a new PLAUD recording. Sync it and generate its transcript in PLAUD. The bridge retries while the transcript is pending; `make plaud-retry` resumes exhausted deliveries.
-6. Reflection validates transcript excerpts and curriculum IDs before atomically saving the experience, scores, vocabulary evidence and next target. Select another activity after completion to continue without losing progress.
+6. Reflection validates transcript excerpts and curriculum IDs before atomically saving the experience, scores, vocabulary evidence and next target. After completion, the next opportunity is generated automatically from saved activities, proficiency, vocabulary, and the last feedback. Unrelated recordings are excluded without completing the mission or changing progress.
 
 The bridge saves its cursor and pending deliveries in `.plaud_bridge_state.json`. Keep this file across restarts; duplicates do not count twice. On first start, existing PLAUD recordings are baselined rather than assigned to a new mission. Pending recordings retain their original mission binding.
 
@@ -79,6 +79,6 @@ The bridge saves its cursor and pending deliveries in `.plaud_bridge_state.json`
 
 Demo agents use fixed fixtures; the replay is explicitly prerecorded. Live agents analyze the supplied transcript; the backend copies original excerpts as evidence and owns all score/status changes. Service labels show actual BAND, storage and bridge modes.
 
-One backend process and one learner per database. Memory storage loses progress on restart; Neo4j preserves it. Seeded lessons and vocabulary are illustrative starter data, not imported personal history. Startup fails on invalid constraints or a different learner's existing graph rather than wiping it. SSE history is in memory; reconnect refetches persisted state.
+Saved restaurant, Spanish-class and dance-class routines stand in for future calendar/location integrations. One backend process and one learner per database. Memory storage loses progress on restart; Neo4j preserves it. Seeded lessons and vocabulary are illustrative starter data, not imported personal history. Startup fails on invalid constraints or a different learner's existing graph rather than wiping it. SSE history is in memory; reconnect refetches persisted state.
 
 Run on localhost. Internal endpoints require `X-Internal-Token`; replace the example token before sharing access. Never commit `.env`, PLAUD authentication or bridge state. Changing API/frontend ports requires matching `WEB_ORIGIN`, `API_BASE_URL` and `NEXT_PUBLIC_API_BASE_URL`.

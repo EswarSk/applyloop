@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from server.demo_seed import example
 from server.graph_view import build_activity, build_graph, build_progress
-from server.learning_rules import (LESSON_PASS_SCORE, application_delta, curriculum, dedupe_word_evidence,
+from server.learning_rules import (LESSON_PASS_SCORE, reflection_delta, curriculum, dedupe_word_evidence,
                                    lesson_statuses, level_summary, scenario_for, seed_knows, word_status)
 
 
@@ -41,6 +41,9 @@ class DemoStore:
         state = deepcopy(self.data)
         state.update(graph_backend=self.backend, focus_words=self.focus_words())
         return state
+
+    def feedback(self):
+        return deepcopy(next(reversed(self.experiences.values()))['result']) if self.experiences else None
 
     def active_mission(self):
         return deepcopy(self.data['active_mission'])
@@ -99,6 +102,9 @@ class DemoStore:
     def recording(self, recording_id):
         return deepcopy(self.recordings.get(recording_id))
 
+    def dismiss_recording(self, recording_id, reason):
+        self.recordings[recording_id].update(status='irrelevant', reason=reason)
+
     def has_experience(self, recording_id):
         return recording_id in self.experiences
 
@@ -115,6 +121,8 @@ class DemoStore:
         referenced = {x.skill_id for x in result.demonstrated + result.gaps} | {result.next_target.skill_id}
         if not referenced <= self.skill_ids():
             raise ValueError('Reflection references an unknown skill')
+        if not result.relevant:
+            raise ValueError('Irrelevant evidence cannot update learning progress')
         evidence = dedupe_word_evidence([w.model_dump() for w in result.word_evidence])
         known_words = {w['id'] for w in curriculum()['words']}
         unknown = {w['word_id'] for w in evidence} - known_words
@@ -123,7 +131,7 @@ class DemoStore:
 
         for skill in self.data['skills']:
             if skill['id'] == mission['skill_id']:
-                skill['application_score'] = round(min(1, skill['application_score'] + application_delta(result.success_score)), 2)
+                skill['application_score'] = round(min(1, skill['application_score'] + reflection_delta(result)), 2)
         before = {w: k['status'] for w, k in self.knows.items()}
         for ev in evidence:
             k = self.knows.setdefault(ev['word_id'], dict(lesson_passed=False, real_uses=0, contexts=[], struggles=0))

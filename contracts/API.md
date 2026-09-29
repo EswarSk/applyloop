@@ -12,7 +12,7 @@ Base: `http://localhost:8000`. JSON names match the supplied guide. Examples liv
 | POST `/api/context` | `{title,type,location}` | context with generated ID; 409 while a mission is assigned |
 | POST `/api/opportunity` | — | 202 `{request_id,status:"processing"}`; mission arrives via SSE; 409 if any active mission exists/pending (select an activity after completion) |
 | POST `/api/internal/plaud/recording` | `{recording_id,title}` | `{status:"detected"}` or `"duplicate"`; binds to active mission |
-| POST `/api/internal/plaud/transcript` | `{recording_id,transcript}` | `{status:"completed",reflection}` or `{status:"duplicate"}`; unknown recording 404 |
+| POST `/api/internal/plaud/transcript` | `{recording_id,transcript}` | `{status:"completed",reflection}`, `{status:"irrelevant",reflection}` or `{status:"duplicate"}`; relevant completion queues the next opportunity; unknown recording 404 |
 | POST `/api/internal/plaud/status` | `{status,message}`; status is `waiting`, `transcript_waiting`, or `error` | `{status:"accepted"}`; publishes bridge activity |
 | POST `/api/demo/replay` | — | demo only (404 otherwise); prerecorded transcript via same reflection/update path; create mission first |
 | GET `/api/activities` | — | per activity (Spanish class, restaurant, dance class): `pick_up` (where you left off there), `last_visit`, `can_say` / `almost` phrases, `practice` words, `lesson` to do before going |
@@ -53,3 +53,5 @@ New event stage `learn` (types `lesson.progress`, `lesson.completed`) and event 
 Rules live in `server/learning_rules.py`; agents never set statuses, scores or levels.
 Activities: `(:Learner)-[:DOES]->(:Activity:Context)-[:IS_A]->(:Scenario)`; demo missions and replays are chosen per activity
 (skill). Replay recording IDs are `replay-<mission id>`, so each mission has at most one replay.
+
+State includes `opportunity_pending` and `last_feedback` (last relevant reflection, nullable for older experiences). Agents receive saved activities and full proficiency/word progress. Reflection first decides `relevant` with `relevance_reason`; excluded evidence never changes proficiency or completes the mission. Relevant progress computes word statuses and CEFR levels with deterministic rules; the model never invents a level.
