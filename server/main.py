@@ -36,7 +36,7 @@ async def lifespan(app):
         async with band_client.lifecycle():
             background = BackgroundTasks()
             mission = store.active_mission()
-            if mission and mission['status'] == 'completed':
+            if (mission and mission['status'] == 'completed') or (not mission and not DEMO_MODE):
                 queue_opportunity(background)
             startup_job = asyncio.create_task(background())
             try:

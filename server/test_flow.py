@@ -88,6 +88,13 @@ class DemoProof(unittest.TestCase):
             self.assertEqual(len(main.bus.history), count)
             self.assertEqual(client.get('/api/state').json()['services']['plaud'], 'connected')
 
+    def test_live_startup_finds_first_opportunity_automatically(self):
+        with patch.object(main, 'DEMO_MODE', False), patch.object(main, 'NEO4J_URI', 'configured'):
+            with TestClient(app) as client:
+                state = client.get('/api/state').json()
+                self.assertEqual(state['active_mission']['status'], 'assigned')
+                self.assertFalse(state['opportunity_pending'])
+
     def test_context_and_feedback_drive_the_next_opportunity(self):
         from server.schemas import Mission
         snapshots = []
