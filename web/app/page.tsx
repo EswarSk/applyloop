@@ -54,20 +54,20 @@ export default function Home() {
   const mission = state?.active_mission;
   const feedback = state?.last_feedback;
   return <main>
-    <header><div><p className="eyebrow">LEARN. APPLY. ADAPT.</p><h1>ApplyLoop<span>↗</span></h1><p>Turn knowledge into real-world experience.</p></div>{state?.mode === 'demo' && <button disabled={busy} onClick={() => action('/api/demo/reset')}>Reset demo</button>}</header>
-    <div className="banner">{!state ? 'Connecting to ApplyLoop…' : <><span>{state?.services?.band === 'live' ? 'LIVE BAND AGENTS' : 'DEMO AGENTS'}</span> {state?.graph_backend === 'neo4j' ? 'Neo4j knowledge graph' : 'In-memory graph'} · PLAUD {state?.services?.plaud || 'disconnected'} <b className={connected ? 'online' : 'offline'}>{connected ? '● Live event stream' : '○ Connecting to backend…'}</b></>}</div>
+    <header><div><p className="eyebrow">LEARN. APPLY. ADAPT.</p><h1>Orbit<span>↗</span></h1><p>Turn knowledge into real-world experience.</p></div>{state?.mode === 'demo' && <button disabled={busy} onClick={() => action('/api/demo/reset')}>Reset demo</button>}</header>
+    <div className="banner">{!state ? 'Connecting to Orbit…' : <><span>{state?.services?.band === 'live' ? 'LIVE BAND AGENTS' : 'DEMO AGENTS'}</span> {state?.graph_backend === 'neo4j' ? 'Neo4j knowledge graph' : 'In-memory graph'} · PLAUD {state?.services?.plaud || 'disconnected'} <b className={connected ? 'online' : 'offline'}>{connected ? '● Live event stream' : '○ Connecting to backend…'}</b></>}</div>
     {error && <p className="error" role="alert">{error.message}</p>}
-    {!state ? <section className="card"><h2>Connecting to ApplyLoop</h2><p>Start the backend with <code>make api</code> and this screen will connect automatically.</p></section> : <>
+    {!state ? <section className="card"><h2>Connecting to Orbit</h2><p>Start the backend with <code>make api</code> and this screen will connect automatically.</p></section> : <>
       {mission?.status === 'assigned' && <section className="next-target" aria-label="Practice invitation" aria-live="polite">
         <span>↗ A PRACTICE OPPORTUNITY FOR YOU</span><h2>{mission.title}</h2><p>{mission.challenge}</p>
         <p>{mission.reason}</p>
-        <p>Record with PLAUD, sync and generate the transcript, and ApplyLoop will update your progress and suggest the next opportunity.</p>
+        <p>Record with PLAUD, sync and generate the transcript, and Orbit will update your progress and suggest the next opportunity.</p>
         <button aria-expanded={practiceMission === mission.id} aria-controls="practice-steps" onClick={() => setPracticeMission(mission.id)}>{practiceMission === mission.id ? 'Practice steps ready' : 'Start practice ↗'}</button>
         {practiceMission === mission.id && <div id="practice-steps"><h3>Your practice flow</h3><ol>
           <li><strong>Start practice</strong> — follow the suggested challenge in {state.context.title}.</li>
           <li><strong>Record with PLAUD</strong> — start a new recording to capture your conversation.</li>
           <li><strong>Sync and generate the transcript</strong> — stop recording, sync it, and generate its transcript in PLAUD.</li>
-          <li><strong>Progress updates automatically</strong> — ApplyLoop checks relevant evidence and updates your skills and vocabulary.</li>
+          <li><strong>Progress updates automatically</strong> — Orbit checks relevant evidence and updates your skills and vocabulary.</li>
           <li><strong>Get the next opportunity</strong> — based on your updated progress and saved context.</li>
         </ol></div>}
       </section>}
@@ -82,7 +82,7 @@ export default function Home() {
       {progress && <KnowledgeCard progress={progress} busy={busy} action={action} demo={state.mode === 'demo'} />}
       <div className="bottom-grid"><section className="card"><p className="eyebrow">LEARNING GRAPH / {state.graph_backend === 'neo4j' ? 'NEO4J' : 'DEMO MEMORY STORE'}</p><div className="graph" aria-label="Learning relationships"><ReactFlow key={graph.nodes.length} nodes={nodes} edges={edges} fitView nodesDraggable nodesConnectable={false} minZoom={0.2}><Background /><Controls /></ReactFlow></div></section><section className="card"><p className="eyebrow">AGENT ACTIVITY</p><div className="timeline" aria-live="polite">{events.length === 0 && <p className="muted">Your application story will appear here. Find an opportunity to start.</p>}{[...events].reverse().map(e => <article key={e.id}><time>{new Date(e.created_at).toLocaleTimeString()}</time><div><b>{e.stage}</b><p>{e.message}</p></div></article>)}</div></section></div>
     </>}
-    <footer>ApplyLoop · Learn. Apply. Adapt.</footer>
+    <footer>Orbit · Learn. Apply. Adapt.</footer>
   </main>;
 }
 
