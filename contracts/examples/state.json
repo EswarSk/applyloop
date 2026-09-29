@@ -1,0 +1,28 @@
+{
+  "learner_id": "demo",
+  "goal": "Conversational Spanish",
+  "skills": [
+    {
+      "id": "restaurant-ordering",
+      "name": "Restaurant ordering",
+      "knowledge_score": 0.82,
+      "application_score": 0.25
+    },
+    {
+      "id": "follow-up-questions",
+      "name": "Restaurant follow-up questions",
+      "knowledge_score": 0.61,
+      "application_score": 0.18
+    }
+  ],
+  "active_mission": null,
+  "context": {
+    "id": "dinner-001",
+    "title": "Dinner at Mexican restaurant",
+    "type": "restaurant",
+    "location": "San Francisco",
+    "starts_at": "2026-09-29T19:00:00-07:00"
+  },
+  "next_target": null,
+  "mode": "demo"
+}

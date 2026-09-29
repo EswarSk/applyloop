@@ -1,0 +1,25 @@
+:root { color-scheme: light; --ink: #193b33; --green: #167d60; --muted: #627770; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #f1f5ef; color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
+main { max-width: 1400px; margin: auto; padding: 40px; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; }
+h1 { font-size: 52px; letter-spacing: -3px; margin: 8px 0; } h1 span { color: var(--green); margin-left: 12px; }
+h2 { font-size: 23px; letter-spacing: -.6px; margin: 10px 0 20px; } h3 { font-size: 16px; }
+p { line-height: 1.5; } .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--muted); }
+button { border: 1px solid #c7d5cd; border-radius: 10px; padding: 12px 18px; font-weight: 600; background: white; color: var(--ink); cursor: pointer; }
+button:disabled { opacity: .45; cursor: default; } button:focus-visible { outline: 3px solid #55a98c; outline-offset: 3px; }
+.primary { background: var(--green); color: white; border-color: var(--green); } .replay { margin-left: 10px; margin-top: 10px; }
+.banner { border: 1px solid #d2dfd5; border-radius: 10px; padding: 13px 17px; font-size: 12px; margin-bottom: 22px; background: #e7eee5; }
+.banner span { font-weight: 700; margin-right: 12px; } .banner b { float: right; } .online { color: var(--green); } .offline { color: #936824; }
+.top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; } .bottom-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 22px; }
+.card { background: #fff; border: 1px solid #dce5dd; border-radius: 18px; padding: 26px; margin-bottom: 22px; }
+.skill { border-top: 1px solid #eef1ec; padding: 5px 0 16px; }.metric { display: flex; align-items: center; gap: 14px; font-size: 12px; margin: 12px 0; }.metric span { width: 80px; }.metric b { width: 40px; text-align: right; }
+progress { width: 100%; height: 9px; accent-color: #aabeb1; } .application progress { accent-color: var(--green); }
+.mission { padding: 18px; background: #f3f6ef; border-radius: 12px; margin: 20px 0; }.tag { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--green); }.muted { color: var(--muted); font-size: 12px; }
+.pipeline { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; }.pipeline div { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: 1; text-transform: capitalize; font-size: 12px; color: #81938a; }.pipeline span { font-size: 25px; }.pipeline .completed { color: var(--green); }.pipeline .processing { color: #b27b23; }.pipeline .processing span { animation: pulse 1.2s infinite; }.pipeline .error { color: #ad3b33; }
+.next-target { background: #173f34; color: #e4f5d5; border-radius: 16px; padding: 24px 28px; margin-bottom: 22px; }.next-target span { font-size: 11px; letter-spacing: 2px; }.next-target h2 { margin: 10px 0; }
+.graph { height: 450px; }.react-flow__node { border: 1px solid #c0d6c8; border-radius: 10px; background: #f7faf4; width: 220px; padding: 14px; }.react-flow__node strong, .react-flow__node span { display: block; margin-top: 6px; }.react-flow__node small { color: var(--muted); text-transform: uppercase; font-size: 9px; }.react-flow__node.graph-gap { background: #fff0d6; border-color: #d9ad55; }.react-flow__node.graph-experience { background: #e2f3df; }
+.timeline { max-height: 450px; overflow-y: auto; }.timeline article { display: flex; gap: 14px; border-bottom: 1px solid #eef1ec; padding: 12px 0; }.timeline time { color: var(--muted); font-size: 10px; white-space: nowrap; padding-top: 4px; }.timeline b { font-size: 12px; text-transform: capitalize; }.timeline p { font-size: 12px; margin: 5px 0; }
+.error { border-radius: 10px; background: #ffebe8; padding: 14px; color: #942e26; } footer { font-size: 11px; color: var(--muted); text-align: center; padding: 12px; }
+@keyframes pulse { 50% { opacity: .35; } } @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+@media (max-width: 850px) { main { padding: 20px; } .top-grid, .bottom-grid { grid-template-columns: 1fr; }.banner b { float: none; display: block; margin-top: 8px; } h1 { font-size: 40px; }.pipeline { overflow-x: auto; }.pipeline div { min-width: 70px; }.replay { margin-left: 0; display: block; } }

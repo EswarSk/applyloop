@@ -1,0 +1,10 @@
+{
+  "id": "mission-001",
+  "skill_id": "restaurant-ordering",
+  "context_id": "dinner-001",
+  "title": "Use restaurant Spanish tonight",
+  "challenge": "Order your entree in Spanish and respond to one follow-up question.",
+  "reason": "Your knowledge is high, but real-world application is low and tonight's context matches this skill.",
+  "confidence": 0.94,
+  "status": "assigned"
+}

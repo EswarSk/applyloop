@@ -1,0 +1,28 @@
+{
+  "nodes": [
+    {
+      "id": "learner",
+      "type": "learner",
+      "data": {
+        "label": "You"
+      }
+    },
+    {
+      "id": "restaurant-ordering",
+      "type": "skill",
+      "data": {
+        "label": "Restaurant ordering",
+        "knowledge": 0.82,
+        "application": 0.39
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "learner",
+      "target": "restaurant-ordering",
+      "label": "APPLIED"
+    }
+  ]
+}

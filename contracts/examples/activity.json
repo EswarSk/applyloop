@@ -1,0 +1,11 @@
+{
+  "id": "evt-123",
+  "type": "plaud.recording.detected",
+  "stage": "plaud",
+  "status": "completed",
+  "message": "New PLAUD recording detected",
+  "created_at": "2026-09-29T12:10:04-07:00",
+  "data": {
+    "recording_id": "..."
+  }
+}

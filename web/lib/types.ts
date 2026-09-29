@@ -1,0 +1,5 @@
+export type Skill = { id: string; name: string; knowledge_score: number; application_score: number };
+export type Mission = { id: string; skill_id: string; context_id: string; title: string; challenge: string; reason: string; confidence: number; status: 'assigned' | 'completed' };
+export type State = { learner_id: string; goal: string; skills: Skill[]; context: { id: string; title: string; type: string; location: string; starts_at?: string }; active_mission: Mission | null; next_target: { skill_id: string; reason: string } | null; mode: 'demo' | 'live' };
+export type Activity = { id: string; type: string; stage: string; status: 'processing' | 'completed' | 'error'; message: string; created_at: string; data: Record<string, unknown> };
+export type Graph = { nodes: { id: string; type: string; data: { label: string; knowledge?: number; application?: number; evidence?: string } }[]; edges: { id: string; source: string; target: string; label: string }[] };

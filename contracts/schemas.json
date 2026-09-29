@@ -1,0 +1,289 @@
+{
+  "ContextInput": {
+    "additionalProperties": false,
+    "properties": {
+      "title": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      },
+      "type": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Type",
+        "type": "string"
+      },
+      "location": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Location",
+        "type": "string"
+      }
+    },
+    "required": [
+      "title",
+      "type",
+      "location"
+    ],
+    "title": "ContextInput",
+    "type": "object"
+  },
+  "Mission": {
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Id",
+        "type": "string"
+      },
+      "skill_id": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Skill Id",
+        "type": "string"
+      },
+      "context_id": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Context Id",
+        "type": "string"
+      },
+      "title": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      },
+      "challenge": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Challenge",
+        "type": "string"
+      },
+      "reason": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Reason",
+        "type": "string"
+      },
+      "confidence": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Confidence",
+        "type": "number"
+      },
+      "status": {
+        "default": "assigned",
+        "enum": [
+          "assigned",
+          "completed"
+        ],
+        "title": "Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "skill_id",
+      "context_id",
+      "title",
+      "challenge",
+      "reason",
+      "confidence"
+    ],
+    "title": "Mission",
+    "type": "object"
+  },
+  "ReflectionResult": {
+    "$defs": {
+      "Demonstration": {
+        "additionalProperties": false,
+        "properties": {
+          "skill_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Skill Id",
+            "type": "string"
+          },
+          "evidence": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Evidence",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          }
+        },
+        "required": [
+          "skill_id",
+          "evidence",
+          "confidence"
+        ],
+        "title": "Demonstration",
+        "type": "object"
+      },
+      "Gap": {
+        "additionalProperties": false,
+        "properties": {
+          "skill_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Skill Id",
+            "type": "string"
+          },
+          "evidence": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Evidence",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "name": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_id",
+          "evidence",
+          "confidence",
+          "name"
+        ],
+        "title": "Gap",
+        "type": "object"
+      },
+      "NextTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "skill_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Skill Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skill_id",
+          "reason"
+        ],
+        "title": "NextTarget",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "mission_id": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Mission Id",
+        "type": "string"
+      },
+      "recording_id": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Recording Id",
+        "type": "string"
+      },
+      "success_score": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Success Score",
+        "type": "number"
+      },
+      "demonstrated": {
+        "items": {
+          "$ref": "#/$defs/Demonstration"
+        },
+        "maxItems": 20,
+        "title": "Demonstrated",
+        "type": "array"
+      },
+      "gaps": {
+        "items": {
+          "$ref": "#/$defs/Gap"
+        },
+        "maxItems": 20,
+        "title": "Gaps",
+        "type": "array"
+      },
+      "next_target": {
+        "$ref": "#/$defs/NextTarget"
+      }
+    },
+    "required": [
+      "mission_id",
+      "recording_id",
+      "success_score",
+      "demonstrated",
+      "gaps",
+      "next_target"
+    ],
+    "title": "ReflectionResult",
+    "type": "object"
+  },
+  "RecordingInput": {
+    "additionalProperties": false,
+    "properties": {
+      "recording_id": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Recording Id",
+        "type": "string"
+      },
+      "title": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      }
+    },
+    "required": [
+      "recording_id",
+      "title"
+    ],
+    "title": "RecordingInput",
+    "type": "object"
+  },
+  "TranscriptInput": {
+    "additionalProperties": false,
+    "properties": {
+      "recording_id": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Recording Id",
+        "type": "string"
+      },
+      "transcript": {
+        "maxLength": 100000,
+        "minLength": 10,
+        "title": "Transcript",
+        "type": "string"
+      }
+    },
+    "required": [
+      "recording_id",
+      "transcript"
+    ],
+    "title": "TranscriptInput",
+    "type": "object"
+  }
+}
