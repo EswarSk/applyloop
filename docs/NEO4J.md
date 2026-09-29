@@ -28,6 +28,43 @@ Rules (`server/learning_rules.py`):
 
 Level = highest consecutive level with ≥ 80% of its words practiced. Fluent level needs ≥ 50% of words fluent.
 
+## Live demo: show what just changed
+
+Run **before** the recording (screenshot it), then run again right after the reflection lands.
+
+1. Before/after scoreboard: knowledge vs application and word statuses
+```cypher
+MATCH (l:Learner {id:'demo'})-[s:LEARNING]->(sk:Skill)
+OPTIONAL MATCH (l)-[k:KNOWS]->(:Word)
+RETURN sk.name AS skill, round(s.knowledge_score*100) AS knowledge_pct, round(s.application_score*100) AS application_pct,
+       count(CASE WHEN k.status='fluent' THEN 1 END) AS fluent_words,
+       count(CASE WHEN k.status='practiced' THEN 1 END) AS practiced_words
+```
+
+2. The new real-world attempt as a graph: recording → evidence → words used or missed → gaps → skills
+```cypher
+MATCH (l:Learner {id:'demo'})-[:HAD]->(e:Experience)
+WITH l, e ORDER BY e.created_at DESC LIMIT 1
+MATCH p = (l)-[:HAD]->(e)-[:USED|STRUGGLED_WITH|DEMONSTRATED|REVEALED|EVIDENCED_BY|COMPLETED]->(x)
+OPTIONAL MATCH q = (x)-[:ABOUT|TARGETS]->(:Skill)
+RETURN p, q
+```
+
+3. Knowledge-to-fluency trail: every word that became practiced/fluent through real use (not quizzes)
+```cypher
+MATCH (l:Learner {id:'demo'})-[k:KNOWS]->(w:Word) WHERE k.real_uses > 0
+MATCH p = (l)-[:HAD]->(:Experience)-[:USED]->(w)
+RETURN p
+```
+
+4. Proof the transcript is the source: the exact words used as evidence
+```cypher
+MATCH (:Learner {id:'demo'})-[:HAD]->(e:Experience)-[:EVIDENCED_BY]->(r:Recording)
+RETURN e.created_at, e.success_score, r.id, left(e.transcript, 200) AS transcript ORDER BY e.created_at DESC LIMIT 3
+```
+
+Tip: in Neo4j Browser, set the caption for `Word` to `lemma` and colour it by label; pin the result pane next to the Orbit dashboard.
+
 ## Queries for the pitch (paste into Neo4j Browser / Aura console)
 
 Where did I stop?

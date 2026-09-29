@@ -1,8 +1,8 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Background, Controls, ReactFlow } from '@xyflow/react';
+import { useCallback, useEffect, useState } from 'react';
 import '@xyflow/react/dist/style.css';
 import { API, request } from '../lib/api';
+import GraphView from './GraphView';
 import type { Activity, Activity_, Graph, Progress, State, WordStatus } from '../lib/types';
 
 const stages = ['context', 'opportunity', 'mission', 'plaud', 'reflection', 'graph', 'adapt'];
@@ -45,12 +45,6 @@ export default function Home() {
     catch (e) { setError({ message: e instanceof Error ? e.message : 'Request failed' }); }
     finally { setBusy(false); }
   }
-  const nodes = useMemo(() => graph.nodes.map((node, index) => ({
-    ...node, type: 'default', position: { x: (index % 3) * 270, y: Math.floor(index / 3) * 130 },
-    data: { ...node.data, label: <div><small>{node.type}</small><strong>{node.data.label}</strong>{node.data.knowledge !== undefined && <span>K {percent(node.data.knowledge)} · A {percent(node.data.application || 0)}</span>}{node.data.status && <span>{node.data.meaning} · {node.data.status}</span>}</div> },
-    className: `graph-${node.type}${node.data.status ? ` word-${node.data.status}` : ''}`,
-  })), [graph]);
-  const edges = useMemo(() => graph.edges.map(edge => ({ ...edge, animated: ['REVEALED', 'DEMONSTRATED', 'USED', 'STRUGGLED_WITH'].includes(edge.label) })), [graph]);
   const mission = state?.active_mission;
   const feedback = state?.last_feedback;
   return <main>
@@ -80,7 +74,7 @@ export default function Home() {
       {feedback && <section className="card" aria-label="Latest practice feedback"><p className="eyebrow">LATEST PRACTICE FEEDBACK</p><h2>{percent(feedback.success_score)} practice success</h2><p>{feedback.next_target.reason}</p>{feedback.gaps.length > 0 && <ul>{feedback.gaps.map((gap, i) => <li key={i}>{gap.name}</li>)}</ul>}<p className="muted">{feedback.word_evidence.filter(w => w.outcome === 'used_correctly').length} vocabulary observations used correctly · {feedback.word_evidence.filter(w => w.outcome !== 'used_correctly').length} to practice again. Your progress informs the next opportunity.</p></section>}
       {state.next_target && <section className="next-target"><span>↗ NEXT LEARNING TARGET</span><h2>{state.skills.find(s => s.id === state.next_target?.skill_id)?.name}</h2><p>{state.next_target.reason}</p></section>}
       {progress && <KnowledgeCard progress={progress} busy={busy} action={action} demo={state.mode === 'demo'} />}
-      <div className="bottom-grid"><section className="card"><p className="eyebrow">LEARNING GRAPH / {state.graph_backend === 'neo4j' ? 'NEO4J' : 'DEMO MEMORY STORE'}</p><div className="graph" aria-label="Learning relationships"><ReactFlow key={graph.nodes.length} nodes={nodes} edges={edges} fitView nodesDraggable nodesConnectable={false} minZoom={0.2}><Background /><Controls /></ReactFlow></div></section><section className="card"><p className="eyebrow">AGENT ACTIVITY</p><div className="timeline" aria-live="polite">{events.length === 0 && <p className="muted">Your application story will appear here. Find an opportunity to start.</p>}{[...events].reverse().map(e => <article key={e.id}><time>{new Date(e.created_at).toLocaleTimeString()}</time><div><b>{e.stage}</b><p>{e.message}</p></div></article>)}</div></section></div>
+      <div className="bottom-grid"><section className="card"><p className="eyebrow">LEARNING GRAPH / {state.graph_backend === 'neo4j' ? 'NEO4J' : 'DEMO MEMORY STORE'}</p><GraphView graph={graph} /></section><section className="card"><p className="eyebrow">AGENT ACTIVITY</p><div className="timeline" aria-live="polite">{events.length === 0 && <p className="muted">Your application story will appear here. Find an opportunity to start.</p>}{[...events].reverse().map(e => <article key={e.id}><time>{new Date(e.created_at).toLocaleTimeString()}</time><div><b>{e.stage}</b><p>{e.message}</p></div></article>)}</div></section></div>
     </>}
     <footer>Orbit · Learn. Apply. Adapt.</footer>
   </main>;
