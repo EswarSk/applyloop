@@ -25,6 +25,7 @@ bus = EventBus()
 lock = asyncio.Lock()
 pending_opportunity = None
 plaud_connected = False
+last_plaud_status = None
 
 @asynccontextmanager
 async def lifespan(app):
@@ -58,13 +59,13 @@ async def health():
     return {'status': 'ok'}
 
 @app.get('/api/state')
-async def state():
+def state():
     return {**store.state(), 'opportunity_pending': pending_opportunity is not None,
             'last_feedback': store.feedback(), 'services': {'band': BAND_MODE, 'storage': store.backend,
                                         'plaud': 'connected' if plaud_connected else 'disconnected'}}
 
 @app.get('/api/graph')
-async def graph():
+def graph():
     return store.graph()
 
 @app.post('/api/demo/reset')
@@ -124,7 +125,7 @@ async def create_opportunity(request_id):
             await bus.publish('mission.created', 'mission', 'completed', mission.challenge)
             await bus.publish('plaud.waiting', 'plaud', 'processing', 'Waiting for a new PLAUD recording; start make plaud')
         except Exception as exc:
-            await bus.publish('error', 'opportunity', 'error', str(exc))
+            await bus.publish('error', 'opportunity', 'error', str(exc) or type(exc).__name__)
         finally:
             pending_opportunity = None
 
@@ -195,10 +196,13 @@ async def recording(payload: RecordingInput, x_expected_mission_id: str | None =
 
 @app.post('/api/internal/plaud/status', dependencies=[Depends(internal_token)])
 async def bridge_status(payload: BridgeStatusInput):
-    global plaud_connected
+    global plaud_connected, last_plaud_status
     plaud_connected = payload.status != 'error'
     event = {'waiting': 'plaud.waiting', 'transcript_waiting': 'plaud.transcript.waiting', 'error': 'error'}[payload.status]
-    await bus.publish(event, 'plaud', 'error' if payload.status == 'error' else 'processing', payload.message)
+    status = (payload.status, payload.message)
+    if status != last_plaud_status:
+        await bus.publish(event, 'plaud', 'error' if payload.status == 'error' else 'processing', payload.message)
+        last_plaud_status = status
     return {'status': 'accepted'}
 
 @app.post('/api/internal/plaud/transcript', dependencies=[Depends(internal_token)])
@@ -240,7 +244,7 @@ def vocabulary_message(vocab):
 
 # ---------- activities: Spanish class, restaurant, dance class ----------
 @app.get('/api/activities')
-async def activities():
+def activities():
     """Per activity: where you left off there, what you can already say, what to practice or learn next."""
     return store.activities()
 
@@ -261,7 +265,7 @@ async def start_activity(activity_id: str):
 
 # ---------- learner knowledge graph: level, words, lessons, resume point ----------
 @app.get('/api/learner/progress')
-async def learner_progress():
+def learner_progress():
     return store.progress()
 
 async def lesson_action(fn, *args):

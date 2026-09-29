@@ -102,7 +102,6 @@ def read_transcript(recording_id):
 class Backend:
     def __init__(self, client):
         self.client = client
-        self.last_status = None
 
     def post(self, path, payload, headers=None):
         response = self.client.post(path, json=payload, headers=headers)
@@ -130,10 +129,7 @@ class Backend:
         return response.json()['active_mission']
 
     def notify(self, status, message):
-        if self.last_status == (status, message):
-            return
         self.post('/api/internal/plaud/status', {'status': status, 'message': message})
-        self.last_status = status, message
 
 
 def backend_client():

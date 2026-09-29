@@ -58,6 +58,36 @@ class DemoProof(unittest.TestCase):
             self.assertNotEqual(client.get('/api/state').json()['active_mission']['id'], next_id)
             self.assertEqual(sum(n['type'] == 'experience' for n in client.get('/api/graph').json()['nodes']), 2)
 
+    def test_database_reads_do_not_block_health_or_agent_messages(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Event
+        started, release = Event(), Event()
+        def slow_state():
+            started.set()
+            release.wait(3)
+            return {}
+        with patch.object(main.store, 'state', side_effect=slow_state), TestClient(app) as client:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                reading = pool.submit(client.get, '/api/state')
+                try:
+                    self.assertTrue(started.wait(1))
+                    self.assertEqual(client.get('/health').status_code, 200)
+                    self.assertFalse(reading.done(), 'Database read blocked the event loop')
+                finally:
+                    release.set()
+                self.assertEqual(reading.result().status_code, 200)
+
+    def test_bridge_heartbeat_recovers_connection_without_duplicate_events(self):
+        with patch.object(main, 'last_plaud_status', None), TestClient(app) as client:
+            headers = {'X-Internal-Token': INTERNAL_API_TOKEN}
+            payload = {'status': 'waiting', 'message': 'PLAUD connected'}
+            client.post('/api/internal/plaud/status', json=payload, headers=headers)
+            count = len(main.bus.history)
+            main.plaud_connected = False
+            client.post('/api/internal/plaud/status', json=payload, headers=headers)
+            self.assertEqual(len(main.bus.history), count)
+            self.assertEqual(client.get('/api/state').json()['services']['plaud'], 'connected')
+
     def test_context_and_feedback_drive_the_next_opportunity(self):
         from server.schemas import Mission
         snapshots = []
