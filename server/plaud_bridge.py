@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 CLI_VERSION = '0.3.14'
 
 
+class RecordingUnavailableError(RuntimeError):
+    pass
+
+
 class AuthenticationError(RuntimeError):
     pass
 
@@ -32,6 +36,8 @@ def run_cli(*args):
         raise RuntimeError('PLAUD command timed out') from exc
     if result.returncode == 2:
         raise AuthenticationError('PLAUD authentication expired or missing; run plaud login')
+    if result.returncode and args[0] == 'transcript' and re.search(r'\b404\b|NOT_FOUND', result.stderr):
+        raise RecordingUnavailableError('PLAUD could not find this recording (HTTP 404)')
     if result.returncode:
         # CLI errors can include account details; don't relay raw stderr.
         raise RuntimeError(f'PLAUD command failed (exit {result.returncode}); check network and CLI login')
@@ -96,7 +102,6 @@ def read_transcript(recording_id):
 class Backend:
     def __init__(self, client):
         self.client = client
-        self.last_status = None
 
     def post(self, path, payload, headers=None):
         response = self.client.post(path, json=payload, headers=headers)
@@ -114,7 +119,7 @@ class Backend:
     def submit(self, rid, text):
         payload = TranscriptInput(recording_id=rid, transcript=text)
         result = self.post('/api/internal/plaud/transcript', payload.model_dump())
-        if result.get('status') not in {'completed', 'duplicate'}:
+        if result.get('status') not in {'completed', 'duplicate', 'irrelevant'}:
             raise ValueError('Backend did not acknowledge transcript completion')
         return result
 
@@ -124,10 +129,7 @@ class Backend:
         return response.json()['active_mission']
 
     def notify(self, status, message):
-        if self.last_status == (status, message):
-            return
         self.post('/api/internal/plaud/status', {'status': status, 'message': message})
-        self.last_status = status, message
 
 
 def backend_client():
@@ -206,6 +208,10 @@ class Watcher:
             self.backend.notify('waiting', 'PLAUD connected; waiting for a new synced recording')
             return
         new_ids = set(recordings) - set(self.state.seen)
+        if not new_ids and not any(not p.exhausted for p in self.state.pending.values()):
+            retained = len(self.state.pending)
+            self.backend.notify('waiting', f'PLAUD connected; waiting for relevant practice evidence. {retained} earlier recordings retained for review.' if retained
+                                else 'PLAUD connected; waiting for a new practice recording.')
         if new_ids:
             mission = self.backend.mission()
             for rid in sorted(new_ids):
@@ -232,11 +238,16 @@ class Watcher:
                         self.backend.notify('error', 'PLAUD transcript retry limit reached; use make plaud-retry after transcription is ready')
                     self.save()
                     continue
-                self.backend.submit(rid, text)
+                outcome = self.backend.submit(rid, text)
                 self.state.processed.append(rid)
                 del self.state.pending[rid]
                 self.save()
-                self.backend.notify('waiting', 'PLAUD recording processed; waiting for the next mission and recording')
+                self.backend.notify('waiting', 'Unrelated recording excluded; waiting for relevant practice evidence.' if outcome and outcome.get('status') == 'irrelevant'
+                                    else 'PLAUD recording processed; the next opportunity is prepared automatically. Waiting for a new recording.')
+            except RecordingUnavailableError:
+                pending.exhausted = True
+                self.save()
+                self.backend.notify('waiting', 'PLAUD connected; an unavailable recording (HTTP 404) is retained for review. Waiting for a new recording.')
             except AuthenticationError:
                 raise
             except (RuntimeError, ValueError, httpx.HTTPError) as exc:
@@ -251,7 +262,10 @@ class Watcher:
                 if not isinstance(exc, httpx.HTTPError) and pending.attempts >= self.max_attempts:
                     pending.exhausted = True
                 self.save()
-                self.backend.notify('error', f'PLAUD delivery pending ({type(exc).__name__}); check mission, BAND, and connectivity')
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 502:
+                    self.backend.notify('transcript_waiting', 'PLAUD connected; transcript retained while reflection retries. Progress changes only after validation.')
+                else:
+                    self.backend.notify('error', f'PLAUD delivery pending ({type(exc).__name__}); check mission, BAND, and connectivity')
 
 
 def main():

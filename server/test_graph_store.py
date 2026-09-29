@@ -75,6 +75,7 @@ class StoreContract:
         labels = {e['label'] for e in graph['edges']}
         self.assertTrue({'USED', 'STRUGGLED_WITH', 'AT_LEVEL', 'CURRENTLY_AT', 'PRACTICES'} <= labels)
         self.assertEqual(len({n['id'] for n in graph['nodes']}), len(graph['nodes']))
+        self.assertEqual(self.store.feedback()['recording_id'], 'plaud-recording-id')
         self.assertFalse(self.store.apply(reflection(), 'duplicate'))
         self.assertEqual(self.words()['quiero']['real_uses'], 2)
 
@@ -86,6 +87,24 @@ class StoreContract:
             self.store.apply(bad, 'transcript text')
         self.assertEqual(self.store.state()['skills'][0]['application_score'], .25)
         self.assertEqual(self.store.state()['active_mission']['status'], 'assigned')
+        self.assertFalse(self.store.has_experience('plaud-recording-id'))
+
+    def test_real_word_evidence_updates_proficiency_level(self):
+        words = [w for l in curriculum()['lessons'] if l['level'] == 'A2' for w in l['words']]
+        result = reflection(word_evidence=[{'word_id': w, 'outcome': 'used_correctly', 'evidence': 'Relevant practice.'} for w in words])
+        self.run_mission(result)
+        self.assertEqual(self.store.progress()['level']['current'], 'A2')
+        self.assertEqual(self.store.feedback()['word_evidence'], result.model_dump()['word_evidence'])
+
+    def test_irrelevant_evidence_never_changes_proficiency(self):
+        self.store.assign(mission())
+        self.store.record('plaud-recording-id', 'Unrelated recording')
+        before = self.store.state()
+        with self.assertRaises(ValueError):
+            self.store.apply(reflection(relevant=False), 'Unrelated meeting')
+        self.store.dismiss_recording('plaud-recording-id', 'Unrelated meeting')
+        self.assertEqual(self.store.recording('plaud-recording-id')['status'], 'irrelevant')
+        self.assertEqual(self.store.state(), before)
         self.assertFalse(self.store.has_experience('plaud-recording-id'))
 
     def test_resume_point_and_lesson_rules(self):
@@ -344,7 +363,7 @@ class Neo4jGlueTest(unittest.TestCase):
         s = self.store
         s.connect()
         s.reset()
-        s.state(); s.progress(); s.graph()
+        s.state(); s.progress(); s.graph(); s.feedback()
         self.mission = None
         s.set_context({'id': 'c', 'title': 't', 'type': 'restaurant', 'location': 'SF'})
         s.assign(mission())
@@ -354,6 +373,7 @@ class Neo4jGlueTest(unittest.TestCase):
         summary = s.apply(reflection(recording_id='r1'), 'transcript text')
         self.assertIn('word_evidence', self.tx.calls)
         self.assertEqual(summary['words_used'], ['quiero', 'el-agua'])
+        s.dismiss_recording('irrelevant', 'Recorder test')
         s.save_step('es-a2-01', 4)
         self.assertTrue(s.complete_lesson('es-a2-01', .9)['passed'])
         self.assertEqual(s.start_activity('dance-001')['id'], 'dance-001')

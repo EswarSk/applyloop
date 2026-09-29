@@ -1,13 +1,13 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Background, Controls, ReactFlow } from '@xyflow/react';
+import { useCallback, useEffect, useState } from 'react';
 import '@xyflow/react/dist/style.css';
 import { API, request } from '../lib/api';
+import GraphView from './GraphView';
 import type { Activity, Activity_, Graph, Progress, State, WordStatus } from '../lib/types';
 
 const stages = ['context', 'opportunity', 'mission', 'plaud', 'reflection', 'graph', 'adapt'];
 const percent = (n: number) => `${Math.round(n * 100)}%`;
-const refreshOn = ['context.added', 'mission.created', 'graph.updated', 'vocabulary.updated', 'learning_path.adapted', 'lesson.progress', 'lesson.completed', 'plaud.waiting', 'plaud.transcript.waiting', 'plaud.recording.detected', 'error'];
+const refreshOn = ['opportunity.started', 'opportunity.completed', 'reflection.filtered', 'context.added', 'mission.created', 'graph.updated', 'vocabulary.updated', 'learning_path.adapted', 'lesson.progress', 'lesson.completed', 'plaud.waiting', 'plaud.transcript.waiting', 'plaud.recording.detected', 'error'];
 const statusOrder: WordStatus[] = ['fluent', 'practiced', 'introduced', 'new'];
 
 export default function Home() {
@@ -19,9 +19,11 @@ export default function Home() {
   const [error, setError] = useState<{ message: string; stage?: string } | null>(null);
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [practiceMission, setPracticeMission] = useState<string | null>(null);
   const refresh = useCallback(async () => {
     const [s, g, p, a] = await Promise.all([request<State>('/api/state'), request<Graph>('/api/graph'), request<Progress>('/api/learner/progress'), request<Activity_[]>('/api/activities')]);
     setState(s); setGraph(g); setProgress(p); setActivities(a);
+    setError(previous => previous?.stage ? previous : null);
   }, []);
   useEffect(() => {
     refresh().catch(e => setError({ message: e.message }));
@@ -43,33 +45,42 @@ export default function Home() {
     catch (e) { setError({ message: e instanceof Error ? e.message : 'Request failed' }); }
     finally { setBusy(false); }
   }
-  const nodes = useMemo(() => graph.nodes.map((node, index) => ({
-    ...node, type: 'default', position: { x: (index % 3) * 270, y: Math.floor(index / 3) * 130 },
-    data: { ...node.data, label: <div><small>{node.type}</small><strong>{node.data.label}</strong>{node.data.knowledge !== undefined && <span>K {percent(node.data.knowledge)} · A {percent(node.data.application || 0)}</span>}{node.data.status && <span>{node.data.meaning} · {node.data.status}</span>}</div> },
-    className: `graph-${node.type}${node.data.status ? ` word-${node.data.status}` : ''}`,
-  })), [graph]);
-  const edges = useMemo(() => graph.edges.map(edge => ({ ...edge, animated: ['REVEALED', 'DEMONSTRATED', 'USED', 'STRUGGLED_WITH'].includes(edge.label) })), [graph]);
   const mission = state?.active_mission;
+  const feedback = state?.last_feedback;
   return <main>
-    <header><div><p className="eyebrow">LEARN. APPLY. ADAPT.</p><h1>ApplyLoop<span>↗</span></h1><p>Turn knowledge into real-world experience.</p></div>{state?.mode === 'demo' && <button disabled={busy} onClick={() => action('/api/demo/reset')}>Reset demo</button>}</header>
-    <div className="banner"><span>{state?.services?.band === 'live' ? 'LIVE BAND AGENTS' : 'DEMO AGENTS'}</span> {state?.graph_backend === 'neo4j' ? 'Neo4j knowledge graph' : 'In-memory graph'} · PLAUD {state?.services?.plaud || 'disconnected'} <b className={connected ? 'online' : 'offline'}>{connected ? '● Live event stream' : '○ Connecting to backend…'}</b></div>
+    <header><div><p className="eyebrow">LEARN. APPLY. ADAPT.</p><h1>Orbit<span>↗</span></h1><p>Turn knowledge into real-world experience.</p></div>{state?.mode === 'demo' && <button disabled={busy} onClick={() => action('/api/demo/reset')}>Reset demo</button>}</header>
+    <div className="banner">{!state ? 'Connecting to Orbit…' : <><span>{state?.services?.band === 'live' ? 'LIVE BAND AGENTS' : 'DEMO AGENTS'}</span> {state?.graph_backend === 'neo4j' ? 'Neo4j knowledge graph' : 'In-memory graph'} · PLAUD {state?.services?.plaud || 'disconnected'} <b className={connected ? 'online' : 'offline'}>{connected ? '● Live event stream' : '○ Connecting to backend…'}</b></>}</div>
     {error && <p className="error" role="alert">{error.message}</p>}
-    {!state ? <section className="card"><h2>Connecting to ApplyLoop</h2><p>Start the backend with <code>make api</code> and this screen will connect automatically.</p></section> : <>
+    {!state ? <section className="card"><h2>Connecting to Orbit</h2><p>Start the backend with <code>make api</code> and this screen will connect automatically.</p></section> : <>
+      {mission?.status === 'assigned' && <section className="next-target" aria-label="Practice invitation" aria-live="polite">
+        <span>↗ A PRACTICE OPPORTUNITY FOR YOU</span><h2>{mission.title}</h2><p>{mission.challenge}</p>
+        <p>{mission.reason}</p>
+        <p>Record with PLAUD, sync and generate the transcript, and Orbit will update your progress and suggest the next opportunity.</p>
+        <button aria-expanded={practiceMission === mission.id} aria-controls="practice-steps" onClick={() => setPracticeMission(mission.id)}>{practiceMission === mission.id ? 'Practice steps ready' : 'Start practice ↗'}</button>
+        {practiceMission === mission.id && <div id="practice-steps"><h3>Your practice flow</h3><ol>
+          <li><strong>Start practice</strong> — follow the suggested challenge in {state.context.title}.</li>
+          <li><strong>Record with PLAUD</strong> — start a new recording to capture your conversation.</li>
+          <li><strong>Sync and generate the transcript</strong> — stop recording, sync it, and generate its transcript in PLAUD.</li>
+          <li><strong>Progress updates automatically</strong> — Orbit checks relevant evidence and updates your skills and vocabulary.</li>
+          <li><strong>Get the next opportunity</strong> — based on your updated progress and saved context.</li>
+        </ol></div>}
+      </section>}
       <div className="top-grid">
         <section className="card"><p className="eyebrow">YOUR LEARNING STATE</p><h2>{state.goal}</h2>{state.skills.map(skill => <div className="skill" key={skill.id}><h3>{skill.name}</h3><div className="metric"><span>Knowledge</span><progress max="1" value={skill.knowledge_score} aria-label={`${skill.name} knowledge`} /><b>{percent(skill.knowledge_score)}</b></div><div className="metric application"><span>Application</span><progress max="1" value={skill.application_score} aria-label={`${skill.name} application`} /><b>{percent(skill.application_score)}</b></div></div>)}</section>
-        <section className="card context"><p className="eyebrow">TODAY’S OPPORTUNITY</p><h2>{state.context.title}</h2><p>{state.context.location}{state.context.when && ` · ${state.context.when}`}{state.context.with_whom && ` · with ${state.context.with_whom}`}</p><div className="mission"><span className="tag">{mission ? mission.status.toUpperCase() : 'READY TO PRACTICE'}</span><h3>{mission?.title || 'You know it. Now try it.'}</h3><p>{mission?.challenge || 'Find a small practice mission based on what you know and where you’re going.'}</p>{mission && <p className="muted">{mission.reason}</p>}{!mission && state.focus_words.length > 0 && <p className="muted">Learned but not yet used in real life: {state.focus_words.map(w => w.lemma).join(', ')}</p>}</div><button className="primary" disabled={busy || !!mission} onClick={() => action('/api/opportunity')}>Find opportunity ↗</button>{mission?.status === 'assigned' && state.mode === 'demo' && <button className="replay" disabled={busy} onClick={() => action('/api/demo/replay')}>Play prerecorded demo replay</button>}<p className="muted">Record your practice in PLAUD and generate its transcript. The connected bridge sends it for reflection. Demo replay uses prerecorded evidence.</p></section>
+        <section className="card context"><p className="eyebrow">TODAY’S OPPORTUNITY</p><h2>{state.context.title}</h2><p>{state.context.location}{state.context.when && ` · ${state.context.when}`}{state.context.with_whom && ` · with ${state.context.with_whom}`}</p><div className="mission"><span className="tag">{mission ? mission.status.toUpperCase() : 'READY TO PRACTICE'}</span><h3>{mission?.title || 'You know it. Now try it.'}</h3><p>{mission?.challenge || 'Find a small practice mission based on what you know and where you’re going.'}</p>{mission && <p className="muted">{mission.reason}</p>}{!mission && state.focus_words.length > 0 && <p className="muted">Learned but not yet used in real life: {state.focus_words.map(w => w.lemma).join(', ')}</p>}</div>{mission?.status !== 'assigned' && <button className="primary" disabled={busy || state.opportunity_pending} onClick={() => action('/api/opportunity')}>{state.opportunity_pending ? 'Preparing next opportunity…' : 'Find opportunity ↗'}</button>}{mission?.status === 'assigned' && state.mode === 'demo' && <button className="replay" disabled={busy} onClick={() => action('/api/demo/replay')}>Play prerecorded demo replay</button>}<p className="muted">Record your practice in PLAUD and generate its transcript. The connected bridge sends it for reflection. {state.mode === 'demo' && 'Demo replay uses prerecorded evidence.'}</p></section>
       </div>
       {activities.length > 0 && <ActivitiesCard activities={activities} busy={busy} locked={mission?.status === 'assigned'} action={action} />}
-      <section className="card"><p className="eyebrow">THE APPLICATION LOOP</p><div className="pipeline">{stages.map(stage => { const latest = [...events].reverse().find(e => e.stage === stage); const status = latest?.status || (stage === 'context' ? 'completed' : 'idle'); return <div key={stage} className={status}><span>{status === 'completed' ? '✓' : status === 'error' ? '!' : status === 'processing' ? '◉' : '○'}</span><b>{stage}</b></div>; })}</div></section>
+      <section className="card"><p className="eyebrow">THE APPLICATION LOOP</p><p className="muted">Relevant recording → reflection → saved progress → next opportunity, automatically.</p><div className="pipeline">{stages.map(stage => { const latest = [...events].reverse().find(e => e.stage === stage); const status = latest?.status || (stage === 'context' ? 'completed' : 'idle'); return <div key={stage} className={status}><span>{status === 'completed' ? '✓' : status === 'error' ? '!' : status === 'processing' ? '◉' : '○'}</span><b>{stage}</b></div>; })}</div></section>
+      {feedback && <section className="card" aria-label="Latest practice feedback"><p className="eyebrow">LATEST PRACTICE FEEDBACK</p><h2>{percent(feedback.success_score)} practice success</h2><p>{feedback.next_target.reason}</p>{feedback.gaps.length > 0 && <ul>{feedback.gaps.map((gap, i) => <li key={i}>{gap.name}</li>)}</ul>}<p className="muted">{feedback.word_evidence.filter(w => w.outcome === 'used_correctly').length} vocabulary observations used correctly · {feedback.word_evidence.filter(w => w.outcome !== 'used_correctly').length} to practice again. Your progress informs the next opportunity.</p></section>}
       {state.next_target && <section className="next-target"><span>↗ NEXT LEARNING TARGET</span><h2>{state.skills.find(s => s.id === state.next_target?.skill_id)?.name}</h2><p>{state.next_target.reason}</p></section>}
-      {progress && <KnowledgeCard progress={progress} busy={busy} action={action} />}
-      <div className="bottom-grid"><section className="card"><p className="eyebrow">LEARNING GRAPH / {state.graph_backend === 'neo4j' ? 'NEO4J' : 'DEMO MEMORY STORE'}</p><div className="graph" aria-label="Learning relationships"><ReactFlow key={graph.nodes.length} nodes={nodes} edges={edges} fitView nodesDraggable nodesConnectable={false} minZoom={0.2}><Background /><Controls /></ReactFlow></div></section><section className="card"><p className="eyebrow">AGENT ACTIVITY</p><div className="timeline" aria-live="polite">{events.length === 0 && <p className="muted">Your application story will appear here. Find an opportunity to start.</p>}{[...events].reverse().map(e => <article key={e.id}><time>{new Date(e.created_at).toLocaleTimeString()}</time><div><b>{e.stage}</b><p>{e.message}</p></div></article>)}</div></section></div>
+      {progress && <KnowledgeCard progress={progress} busy={busy} action={action} demo={state.mode === 'demo'} />}
+      <div className="bottom-grid"><section className="card"><p className="eyebrow">LEARNING GRAPH / {state.graph_backend === 'neo4j' ? 'NEO4J' : 'DEMO MEMORY STORE'}</p><GraphView graph={graph} /></section><section className="card"><p className="eyebrow">AGENT ACTIVITY</p><div className="timeline" aria-live="polite">{events.length === 0 && <p className="muted">Your application story will appear here. Find an opportunity to start.</p>}{[...events].reverse().map(e => <article key={e.id}><time>{new Date(e.created_at).toLocaleTimeString()}</time><div><b>{e.stage}</b><p>{e.message}</p></div></article>)}</div></section></div>
     </>}
-    <footer>ApplyLoop · Learn. Apply. Adapt.</footer>
+    <footer>Orbit · Learn. Apply. Adapt.</footer>
   </main>;
 }
 
-function KnowledgeCard({ progress, busy, action }: { progress: Progress; busy: boolean; action: (path: string, body?: unknown) => Promise<void> }) {
+function KnowledgeCard({ progress, busy, action, demo }: { progress: Progress; busy: boolean; demo: boolean; action: (path: string, body?: unknown) => Promise<void> }) {
   const { level, resume, counts } = progress;
   const lessonTitles = Object.fromEntries(progress.lessons.map(l => [l.id, l.title]));
   const words = [...progress.words].filter(w => w.status !== 'new').sort((a, b) => statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status));
@@ -91,11 +102,11 @@ function KnowledgeCard({ progress, busy, action }: { progress: Progress; busy: b
         {resume ? <>
           <h3>{resume.title}</h3>
           <div className="metric"><span>Step {resume.step}/{resume.steps}</span><progress max={resume.steps} value={resume.step} /></div>
-          <div className="lesson-actions">
+          {demo && <><p className="muted">Demo lesson controls</p><div className="lesson-actions">
             <button disabled={busy || resume.step >= resume.steps} onClick={() => post('progress', { step: resume.step + 1 })}>Next step</button>
             <button className="primary" disabled={busy} onClick={() => post('complete', { score: 0.9 })}>Pass lesson (90%)</button>
             <button disabled={busy} onClick={() => post('complete', { score: 0.5 })}>Fail (50%)</button>
-          </div>
+          </div></>}
         </> : <p className="muted">No lesson in progress.</p>}
         <ol className="lessons">{progress.lessons.map(l => <li key={l.id} className={`lesson-${l.status}`}>{l.level} · {l.title}<small>{l.status}{l.best_score !== null ? ` · ${percent(l.best_score)}` : ''}</small></li>)}</ol>
       </div>
@@ -106,7 +117,7 @@ function KnowledgeCard({ progress, busy, action }: { progress: Progress; busy: b
 
 function ActivitiesCard({ activities, busy, locked, action }: { activities: Activity_[]; busy: boolean; locked: boolean; action: (path: string, body?: unknown) => Promise<void> }) {
   return <section className="card">
-    <p className="eyebrow">YOUR ACTIVITIES · SPEAK SPANISH WHEREVER YOU GO</p>
+    <p className="eyebrow">SAVED ACTIVITIES · CONTEXT FOR YOUR NEXT OPPORTUNITY</p>
     <div className="activities">{activities.map(a => <article key={a.id} className={`activity${a.is_current ? ' current' : ''}`}>
       <div className="activity-head"><h3>{a.title}</h3>{a.is_current && <span className="tag">NOW</span>}</div>
       <p className="muted">{a.when} · {a.with_whom}</p>

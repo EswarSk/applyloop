@@ -80,6 +80,8 @@ class ApplyLoopAdapter(SimpleAdapter):
                 except Exception as exc:
                     # Validation errors can echo transcript text; report only the category.
                     reply['error'] = f'BAND {self.kind} failed ({type(exc).__name__}); check credentials, model output, and connectivity'
+                    if type(exc) is ValueError and str(exc).startswith(('Reflection ', 'Irrelevant recording ')):
+                        reply['error'] = str(exc)
                     logger.warning('%s', reply['error'])
                 job.reply = reply
             await tools.send_message(MARKER + json.dumps(job.reply), mentions=[{'id': msg.sender_id}])
@@ -171,10 +173,10 @@ async def opportunity(state):
     return Mission.model_validate(await runtime.invoke('opportunity', state))
 
 
-async def reflection(mission, recording_id, transcript, skills=None, words=None):
+async def reflection(mission, recording_id, transcript, skills=None, words=None, learner=None):
     if BAND_MODE == 'demo':
         return await demo_reflection(mission, recording_id, transcript)
     if runtime is None:
         raise RuntimeError('Live BAND runtime is not connected')
     return ReflectionResult.model_validate(await runtime.invoke('reflection', {
-        'mission': mission, 'recording_id': recording_id, 'transcript': transcript, 'skills': skills or [], 'words': words or []}))
+        'mission': mission, 'recording_id': recording_id, 'transcript': transcript, 'skills': skills or [], 'words': words or [], 'learner': learner or {}}))

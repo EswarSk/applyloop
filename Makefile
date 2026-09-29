@@ -7,7 +7,7 @@ setup:
 api:
 	.venv/bin/python -m uvicorn server.main:app --host 127.0.0.1 --port 8000 --reload --timeout-graceful-shutdown 2
 web:
-	cd web && node --env-file=../.env node_modules/next/dist/bin/next dev
+	cd web && node node_modules/next/dist/bin/next dev
 check:
 	.venv/bin/python -m unittest discover -s server -p 'test_*.py'
 	cd web && npm run typecheck

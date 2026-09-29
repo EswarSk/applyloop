@@ -44,13 +44,78 @@ class DemoProof(unittest.TestCase):
                 state = client.get('/api/state').json()
                 self.assertEqual(state['skills'][0]['application_score'], .39)
                 self.assertEqual(state['next_target']['skill_id'], 'follow-up-questions')
+                self.assertEqual(state['active_mission']['status'], 'assigned')
+                self.assertFalse(state['opportunity_pending'])
+                self.assertEqual(state['last_feedback']['recording_id'], 'proof')
                 nodes = client.get('/api/graph').json()['nodes']
                 self.assertEqual(sum(n['type'] == 'experience' for n in nodes), 1)
                 self.assertTrue(any(n['type'] == 'gap' for n in nodes))
             client.post('/api/demo/reset')
             client.post('/api/opportunity')
             self.assertEqual(client.post('/api/demo/replay').status_code, 200)
-            self.assertEqual(client.post('/api/demo/replay').json()['status'], 'duplicate')
+            next_id = client.get('/api/state').json()['active_mission']['id']
+            self.assertEqual(client.post('/api/demo/replay').json()['status'], 'completed')
+            self.assertNotEqual(client.get('/api/state').json()['active_mission']['id'], next_id)
+            self.assertEqual(sum(n['type'] == 'experience' for n in client.get('/api/graph').json()['nodes']), 2)
+
+    def test_database_reads_do_not_block_health_or_agent_messages(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Event
+        started, release = Event(), Event()
+        def slow_state():
+            started.set()
+            release.wait(3)
+            return {}
+        with patch.object(main.store, 'state', side_effect=slow_state), TestClient(app) as client:
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                reading = pool.submit(client.get, '/api/state')
+                try:
+                    self.assertTrue(started.wait(1))
+                    self.assertEqual(client.get('/health').status_code, 200)
+                    self.assertFalse(reading.done(), 'Database read blocked the event loop')
+                finally:
+                    release.set()
+                self.assertEqual(reading.result().status_code, 200)
+
+    def test_bridge_heartbeat_recovers_connection_without_duplicate_events(self):
+        with patch.object(main, 'last_plaud_status', None), TestClient(app) as client:
+            headers = {'X-Internal-Token': INTERNAL_API_TOKEN}
+            payload = {'status': 'waiting', 'message': 'PLAUD connected'}
+            client.post('/api/internal/plaud/status', json=payload, headers=headers)
+            count = len(main.bus.history)
+            main.plaud_connected = False
+            client.post('/api/internal/plaud/status', json=payload, headers=headers)
+            self.assertEqual(len(main.bus.history), count)
+            self.assertEqual(client.get('/api/state').json()['services']['plaud'], 'connected')
+
+    def test_live_startup_finds_first_opportunity_automatically(self):
+        with patch.object(main, 'DEMO_MODE', False), patch.object(main, 'NEO4J_URI', 'configured'):
+            with TestClient(app) as client:
+                state = client.get('/api/state').json()
+                self.assertEqual(state['active_mission']['status'], 'assigned')
+                self.assertFalse(state['opportunity_pending'])
+
+    def test_context_and_feedback_drive_the_next_opportunity(self):
+        from server.schemas import Mission
+        snapshots = []
+        async def choose(snapshot):
+            snapshots.append(snapshot)
+            activity = 'dance-001' if snapshot['active_mission'] else snapshot['context']['id']
+            return Mission.model_validate({**example('mission'), 'id': f'mission-proof-{len(snapshots)}',
+                'context_id': activity, 'skill_id': 'restaurant-ordering' if len(snapshots) == 1 else 'dance-small-talk'})
+        with patch('server.band_client.opportunity', side_effect=choose), TestClient(app) as client:
+            client.post('/api/demo/reset'); client.post('/api/opportunity')
+            client.post('/api/demo/replay')
+            self.assertEqual(len(snapshots), 2)
+            self.assertEqual(len(snapshots[1]['activities']), 3)
+            self.assertEqual(snapshots[1]['next_target']['skill_id'], 'follow-up-questions')
+            words = {w['id']: w for w in snapshots[1]['progress']['words']}
+            self.assertEqual(words['quiero']['status'], 'fluent')
+            state = client.get('/api/state').json()
+            self.assertEqual(state['context']['id'], 'dance-001')
+            self.assertEqual(state['active_mission']['skill_id'], 'dance-small-talk')
+            self.assertEqual(state['last_feedback']['mission_id'], 'mission-proof-1')
+            client.post('/api/demo/reset')
 
     def test_live_storage_and_demo_controls(self):
         with patch.object(main, 'DEMO_MODE', False), patch.object(main, 'NEO4J_URI', ''):

@@ -18,7 +18,7 @@ def strict_schema(schema):
     return schema
 
 
-async def generate(client, prompt, payload, contract):
+async def generate(client, prompt, payload, contract, *, schema=None):
     response = await client.post('https://api.openai.com/v1/chat/completions',
         headers={'Authorization': f'Bearer {os.environ["OPENAI_API_KEY"]}'},
         json={'model': os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
@@ -26,7 +26,7 @@ async def generate(client, prompt, payload, contract):
                            {'role': 'user', 'content': json.dumps(payload)}],
               'response_format': {'type': 'json_schema', 'json_schema': {
                   'name': contract.__name__, 'strict': True,
-                  'schema': strict_schema(contract.model_json_schema())}}})
+                  'schema': strict_schema(schema if schema is not None else contract.model_json_schema())}}})
     if response.is_error:
         # Don't echo provider responses, which can contain private inputs.
         raise RuntimeError(f'Model request failed (HTTP {response.status_code})')

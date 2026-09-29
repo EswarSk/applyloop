@@ -24,6 +24,11 @@ def application_delta(score):
     return .15 if score >= .8 else .14 if score >= .6 else .08 if score >= .4 else .03
 
 
+def reflection_delta(result):
+    # No practice evidence means no proficiency gain, even if the recorder captured unrelated speech.
+    return application_delta(result.success_score) if result.demonstrated or result.gaps or result.word_evidence else 0
+
+
 def word_status(lesson_passed, real_uses, contexts):
     """Status from evidence. Mirrors STATUS_CYPHER in neo4j_store.py — keep them in sync."""
     if real_uses >= FLUENT_MIN_REAL_USES and contexts >= FLUENT_MIN_CONTEXTS:

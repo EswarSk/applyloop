@@ -251,6 +251,18 @@
     },
     "additionalProperties": false,
     "properties": {
+      "relevant": {
+        "default": true,
+        "title": "Relevant",
+        "type": "boolean"
+      },
+      "relevance_reason": {
+        "default": "Relevant evidence for the assigned practice context.",
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Relevance Reason",
+        "type": "string"
+      },
       "mission_id": {
         "maxLength": 200,
         "minLength": 1,

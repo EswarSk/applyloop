@@ -27,13 +27,15 @@ Graph model (every node also carries the :ApplyLoop label so reset never touches
 Rules live in learning_rules.py. The LLM only reports evidence; these transactions decide scores,
 statuses and levels, and each mutation commits atomically or not at all.
 """
+import json
 from neo4j import GraphDatabase
 from server.demo_seed import example
 from server.graph_view import build_activity, build_graph, build_progress
-from server.learning_rules import (FLUENT_MIN_CONTEXTS, FLUENT_MIN_REAL_USES, LESSON_PASS_SCORE, application_delta,
+from server.learning_rules import (FLUENT_MIN_CONTEXTS, FLUENT_MIN_REAL_USES, LESSON_PASS_SCORE, reflection_delta,
                                    curriculum, dedupe_word_evidence, lesson_statuses, level_summary, scenario_for,
                                    seed_knows)
 from server.settings import DEMO_MODE
+from server.learning_rules import application_delta  # existing public helper
 from server.memory_store import DemoStore, vocabulary_summary  # noqa: F401  (re-exported for existing imports)
 
 # Mirrors learning_rules.word_status(). `k` must be a KNOWS relationship.
@@ -137,7 +139,8 @@ Q = dict(
         RETURN r.id AS id""",
     recording="""
         MATCH (r:Recording:ApplyLoop {id: $rid})-[:FOR_MISSION]->(m:Mission)
-        RETURN r.title AS title, m.id AS mission_id""",
+        RETURN r.title AS title, m.id AS mission_id, r.status AS status""",
+    dismiss_recording="MATCH (r:Recording:ApplyLoop {id: $rid}) SET r.status = 'irrelevant', r.relevance_reason = $reason",
     experience_exists='MATCH (e:Experience:ApplyLoop {id: $rid}) RETURN count(e) > 0 AS exists',
     apply_check="""
         MATCH (l:Learner:ApplyLoop {id: $learner_id})-[:ACTIVE_MISSION]->(m:Mission)
@@ -158,7 +161,7 @@ Q = dict(
     create_experience="""
         MATCH (l:Learner:ApplyLoop {id: $learner_id})-[:ACTIVE_MISSION]->(m:Mission {id: $mission_id})
         MATCH (r:Recording:ApplyLoop {id: $rid})
-        CREATE (e:ApplyLoop:Experience {id: $rid, success_score: $success_score, transcript: $transcript, created_at: datetime()})
+        CREATE (e:ApplyLoop:Experience {id: $rid, success_score: $success_score, transcript: $transcript, reflection_json: $reflection_json, created_at: datetime()})
         CREATE (l)-[:HAD]->(e), (e)-[:COMPLETED]->(m), (e)-[:EVIDENCED_BY]->(r)
         SET m.status = 'completed',
             l.next_target_skill_id = $next_target.skill_id,
@@ -242,6 +245,7 @@ Q = dict(
         RETURN w.id AS id, w.lemma AS lemma, w.meaning AS meaning, k.real_uses AS real_uses
         ORDER BY k.struggles DESC, k.real_uses DESC, w.id
         LIMIT $limit""",
+    latest_feedback='MATCH (:Learner:ApplyLoop {id: $learner_id})-[:HAD]->(e:Experience) RETURN e.reflection_json AS result ORDER BY e.created_at DESC LIMIT 1',
     experiences="""
         MATCH (:Learner:ApplyLoop {id: $learner_id})-[:HAD]->(e:Experience)-[:EVIDENCED_BY]->(r:Recording)
         MATCH (e)-[:COMPLETED]->(m:Mission)
@@ -405,6 +409,10 @@ class Neo4jStore:
     def state(self):
         return self._read(self._state)
 
+    def feedback(self):
+        row = self._read(lambda tx: self._one(tx, 'latest_feedback'))
+        return json.loads(row['result']) if row and row['result'] else None
+
     def active_mission(self):
         return self.state()['active_mission']
 
@@ -454,11 +462,16 @@ class Neo4jStore:
         row = self._read(lambda tx: self._one(tx, 'recording', rid=recording_id))
         return dict(row) if row else None
 
+    def dismiss_recording(self, recording_id, reason):
+        self._write(lambda tx: self._run(tx, 'dismiss_recording', rid=recording_id, reason=reason))
+
     def has_experience(self, recording_id):
         return self._read(lambda tx: self._one(tx, 'experience_exists', rid=recording_id)['exists'])
 
     def apply(self, result, transcript):
         """Validate references, then write score, experience, gaps and vocabulary in ONE transaction."""
+        if not result.relevant:
+            raise ValueError('Irrelevant evidence cannot update learning progress')
         evidence = dedupe_word_evidence([w.model_dump() for w in result.word_evidence])
         word_ids = sorted({e['word_id'] for e in evidence})
         rid = result.recording_id
@@ -481,10 +494,11 @@ class Neo4jStore:
             before = {r['id']: r['status'] for r in self._run(tx, 'word_statuses', word_ids=word_ids)}
 
             current = self._one(tx, 'application_score', skill_id=mission['skill_id'])['score']
-            new_score = round(min(1, current + application_delta(result.success_score)), 2)
+            new_score = round(min(1, current + reflection_delta(result)), 2)
             self._run(tx, 'set_application_score', skill_id=mission['skill_id'], score=new_score)
             self._run(tx, 'create_experience', mission_id=mission['id'], rid=rid, transcript=transcript,
-                      success_score=result.success_score, next_target=result.next_target.model_dump())
+                      success_score=result.success_score, next_target=result.next_target.model_dump(),
+                      reflection_json=json.dumps(result.model_dump()))
             self._run(tx, 'demonstrated', rid=rid, demonstrated=[d.model_dump() for d in result.demonstrated])
             self._run(tx, 'gaps', rid=rid, gaps=[g.model_dump() for g in result.gaps])
             self._run(tx, 'word_evidence', rid=rid, evidence=evidence, context_id=mission['context_id'])

@@ -42,6 +42,8 @@ class WordEvidence(Payload):
     evidence: Text
 
 class ReflectionResult(Payload):
+    relevant: bool = True
+    relevance_reason: Text = 'Relevant evidence for the assigned practice context.'
     mission_id: Identifier
     recording_id: Identifier
     success_score: Score

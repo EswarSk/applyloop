@@ -169,16 +169,23 @@ class AgentProof(unittest.IsolatedAsyncioTestCase):
                    'transcript': '[00:00 - 00:03] Speaker 1: Testing the recorder.',
                    'skills': example('state')['skills'], 'words': curriculum()['words']}
         result = {'mission_id': payload['mission']['id'], 'recording_id': payload['recording_id'],
+                  'relevant': False, 'relevance_reason': 'Recorder test, not Spanish practice.',
                   'success_score': 0, 'demonstrated': [], 'gaps': [],
                   'next_target': {'skill_id': payload['mission']['skill_id'],
                                   'reason': 'Record a relevant practice attempt.'}}
         def respond(request):
             prompt = json.loads(request.content)['messages'][0]['content']
             self.assertIn('demonstrated=[] and gaps=[]', prompt)
+            schema = json.loads(request.content)['response_format']['json_schema']['schema']
+            self.assertEqual(schema['properties']['mission_id']['enum'], [payload['mission']['id']])
+            self.assertEqual(schema['properties']['recording_id']['enum'], [payload['recording_id']])
+            self.assertEqual(schema['$defs']['ObservationSelection']['properties']['evidence_id']['enum'], [0])
+            self.assertEqual(set(schema['$defs']['NextTarget']['properties']['skill_id']['enum']), {s['id'] for s in payload['skills']})
             return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps(result)}}]})
         with patch.dict(os.environ, ENV):
             async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
                 reflection = await live_reflection(payload, client)
+        self.assertFalse(reflection.relevant)
         self.assertEqual(reflection.success_score, 0)
         self.assertEqual(reflection.demonstrated + reflection.gaps, [])
 
@@ -259,7 +266,8 @@ class BridgeProof(unittest.TestCase):
                 watcher.poll()
             self.assertIn('new', watcher.state.pending)
             # A new activity and backend restart must not prevent acknowledgement of committed evidence.
-            self.assertEqual(client.post('/api/activities/dance-001/start').status_code, 200)
+            self.assertEqual(client.get('/api/state').json()['active_mission']['status'], 'assigned')
+            self.assertNotEqual(client.get('/api/state').json()['active_mission']['id'], previous)
             self.verify_persistence(client)
             watcher = bridge.Watcher(path, backend)
             watcher.state.pending['new'].next_attempt = 0
@@ -274,8 +282,9 @@ class BridgeProof(unittest.TestCase):
             self.assertEqual(words['quiero']['real_uses'], 2)
             self.verify_persistence(client)
             self.assertEqual(sum(n['type'] == 'experience' for n in client.get('/api/graph').json()['nodes']), 1)
-            self.assertEqual(len(harnesses[0].messages), 4)
-            self.assertEqual(client.post('/api/activities/dance-001/start').status_code, 200)
+            self.assertEqual(len(harnesses[0].messages), 6)
+            self.assertEqual(client.get('/api/state').json()['active_mission']['status'], 'assigned')
+            self.assertNotEqual(client.get('/api/state').json()['active_mission']['id'], previous)
             self.assertEqual(sum(n['type'] == 'experience' for n in client.get('/api/graph').json()['nodes']), 1)
             client.post('/api/opportunity')
             response = client.post('/api/internal/plaud/recording', json={'recording_id': 'stale', 'title': 'Old mission'},
@@ -288,6 +297,70 @@ class BridgeProof(unittest.TestCase):
 
     def verify_persistence(self, client):
         pass
+
+    def test_many_recordings_filter_without_finishing_mission(self):
+        with patch.object(main, 'store', self.make_store()), patch.object(main, 'DEMO_MODE', True), \
+                patch.object(main, 'BAND_MODE', 'demo'), patch.object(band_client, 'BAND_MODE', 'demo'), \
+                TestClient(main.app, headers={'X-Internal-Token': INTERNAL_API_TOKEN}) as client:
+            client.post('/api/demo/reset'); client.post('/api/opportunity')
+            before = client.get('/api/state').json()
+            rid = 'unrelated-recording'
+            client.post('/api/internal/plaud/recording', json={'recording_id': rid, 'title': 'Unrelated meeting'})
+            from server.schemas import ReflectionResult
+            irrelevant = ReflectionResult.model_validate({**example('reflection'), 'recording_id': rid,
+                'mission_id': before['active_mission']['id'], 'relevant': False,
+                'relevance_reason': 'No Spanish practice in this meeting.', 'success_score': 0,
+                'demonstrated': [], 'gaps': [], 'word_evidence': []})
+            payload = {'recording_id': rid, 'transcript': 'We discussed unrelated project deadlines.'}
+            with patch.object(band_client, 'reflection', return_value=irrelevant) as reflection_call:
+                self.assertEqual(client.post('/api/internal/plaud/transcript', json=payload).json()['status'], 'irrelevant')
+                self.assertEqual(client.post('/api/internal/plaud/transcript', json=payload).json()['status'], 'irrelevant')
+                self.assertEqual(reflection_call.call_count, 1)
+            after = client.get('/api/state').json()
+            self.assertEqual(before['skills'], after['skills'])
+            self.assertEqual(before['active_mission'], after['active_mission'])
+            self.assertEqual(sum(n['type'] == 'experience' for n in client.get('/api/graph').json()['nodes']), 0)
+            self.assertEqual(client.post('/api/demo/replay').json()['status'], 'completed')
+            after = client.get('/api/state').json()
+            self.assertNotEqual(after['active_mission']['id'], before['active_mission']['id'])
+            self.assertEqual(sum(n['type'] == 'experience' for n in client.get('/api/graph').json()['nodes']), 1)
+            client.post('/api/demo/reset')
+
+    def test_unavailable_recording_is_retained_without_delivery_error(self):
+        with patch('subprocess.run', return_value=SimpleNamespace(returncode=1, stdout='', stderr='HTTP 404')):
+            with self.assertRaises(bridge.RecordingUnavailableError):
+                bridge.run_cli('transcript', 'missing')
+        notices = []
+        backend = SimpleNamespace(register=lambda *a: None, notify=lambda *a: notices.append(a))
+        with TemporaryDirectory() as directory:
+            watcher = bridge.Watcher(Path(directory) / 'state.json', backend)
+            watcher.state = bridge.BridgeState(seen=['missing'], pending={
+                'missing': bridge.PendingRecording(title='Missing', mission_id='original')})
+            with patch.object(bridge, 'list_recordings', return_value={}), \
+                    patch.object(bridge, 'read_transcript', side_effect=bridge.RecordingUnavailableError('HTTP 404')):
+                watcher.poll()
+            self.assertTrue(watcher.state.pending['missing'].exhausted)
+            self.assertEqual(watcher.state.pending['missing'].mission_id, 'original')
+            self.assertEqual(notices[-1][0], 'waiting')
+
+    def test_reflection_failure_retains_transcript_and_plaud_connection(self):
+        notices = []
+        response = httpx.Response(502, request=httpx.Request('POST', 'http://test/transcript'))
+        error = httpx.HTTPStatusError('Reflection failed', request=response.request, response=response)
+        def fail_submit(*args):
+            raise error
+        backend = SimpleNamespace(register=lambda *a: None, notify=lambda *a: notices.append(a),
+                                  submit=fail_submit)
+        with TemporaryDirectory() as directory:
+            watcher = bridge.Watcher(Path(directory) / 'state.json', backend)
+            watcher.state = bridge.BridgeState(seen=['new'], pending={
+                'new': bridge.PendingRecording(title='Practice', mission_id='original')})
+            with patch.object(bridge, 'list_recordings', return_value={}), \
+                    patch.object(bridge, 'read_transcript', return_value=SAMPLE_TRANSCRIPT):
+                watcher.poll()
+            self.assertIn('new', watcher.state.pending)
+            self.assertFalse(watcher.state.processed)
+            self.assertEqual(notices[-1][0], 'transcript_waiting')
 
     def test_cli_parsing_timeouts_and_transcript_readiness(self):
         self.assertEqual(bridge.parse_files(files_output({'id-1': 'Spanish practice'})), {'id-1': 'Spanish practice'})
