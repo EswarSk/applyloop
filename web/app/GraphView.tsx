@@ -73,6 +73,7 @@ const pct = (n = 0) => `${Math.round(n * 100)}%`;
 export default function GraphView({ graph }: { graph: Graph }) {
   const { nodes, edges } = useMemo(() => {
     const pos = layout(graph);
+    // Both stores project experiences in chronological order.
     const latestExperience = graph.nodes.filter(n => n.type === 'experience').at(-1)?.id;
     const latestEdges = new Set(graph.edges.filter(e => e.source === latestExperience && LIVE_EDGES.includes(e.label)).map(e => e.id));
     const touched = new Set(graph.edges.filter(e => latestEdges.has(e.id)).flatMap(e => [e.source, e.target]));
@@ -107,7 +108,7 @@ export default function GraphView({ graph }: { graph: Graph }) {
     </div>
     <div className="graph" aria-label="Learning relationships">
       <ReactFlow key={graph.nodes.length} nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.08 }}
-        nodesDraggable nodesConnectable={false} minZoom={0.15} proOptions={{ hideAttribution: true }}>
+        nodesDraggable nodesConnectable={false} minZoom={0.15}>
         <Background color="#dfe6df" gap={22} /><Controls showInteractive={false} />
       </ReactFlow>
     </div>
