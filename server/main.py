@@ -10,19 +10,21 @@ from server import band_client
 from server.demo_seed import SAMPLE_TRANSCRIPT
 from server.event_bus import EventBus
 from server.neo4j_store import DemoStore
-from server.schemas import ContextInput, RecordingInput, TranscriptInput
-from server.settings import DEMO_MODE, INTERNAL_API_TOKEN, WEB_ORIGIN
+from server.schemas import BridgeStatusInput, ContextInput, RecordingInput, TranscriptInput
+from server.settings import BAND_MODE, DEMO_MODE, INTERNAL_API_TOKEN, WEB_ORIGIN
 
 store, bus = DemoStore(), EventBus()
 # ponytail: serialize one demo learner; use DB transactions for multi-worker/live mode.
 lock = asyncio.Lock()
 pending_opportunity = None
+plaud_connected = False
 
 @asynccontextmanager
 async def lifespan(app):
     if not DEMO_MODE:
-        raise RuntimeError('Live mode requires the Neo4j and BAND adapters. See docs/TEAM_TASKS.md.')
-    yield
+        raise RuntimeError('Live storage requires the Neo4j adapter. Use DEMO_MODE=true BAND_MODE=live to test live BAND with memory storage.')
+    async with band_client.lifecycle():
+        yield
 
 app = FastAPI(title='ApplyLoop', lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=[WEB_ORIGIN], allow_methods=['GET', 'POST'], allow_headers=['Content-Type', 'X-Internal-Token'])
@@ -37,7 +39,8 @@ async def health():
 
 @app.get('/api/state')
 async def state():
-    return store.state()
+    return {**store.state(), 'services': {'band': BAND_MODE, 'storage': 'memory' if DEMO_MODE else 'neo4j',
+                                        'plaud': 'connected' if plaud_connected else 'disconnected'}}
 
 @app.get('/api/graph')
 async def graph():
@@ -50,7 +53,7 @@ async def reset():
         pending_opportunity = None
         store.reset()
         bus.clear()
-        await bus.publish('context.added', 'context', 'completed', 'Demo reset — simulated services', {'reset': True})
+        await bus.publish('context.added', 'context', 'completed', 'Demo learner reset', {'reset': True})
     return store.state()
 
 @app.post('/api/context')
@@ -68,12 +71,12 @@ async def create_opportunity(request_id):
         if pending_opportunity != request_id:
             return
         try:
-            await bus.publish('opportunity.started', 'opportunity', 'processing', 'Demo agent matching skill to context')
+            await bus.publish('opportunity.started', 'opportunity', 'processing', 'BAND matching skill to context' if BAND_MODE == 'live' else 'Demo agent matching skill to context')
             mission = await band_client.opportunity(store.state())
             store.assign(mission)
-            await bus.publish('opportunity.completed', 'opportunity', 'completed', 'Demo opportunity found')
+            await bus.publish('opportunity.completed', 'opportunity', 'completed', 'BAND opportunity validated' if BAND_MODE == 'live' else 'Demo opportunity found')
             await bus.publish('mission.created', 'mission', 'completed', mission.challenge)
-            await bus.publish('plaud.waiting', 'plaud', 'processing', 'Waiting for evidence — replay available in demo mode')
+            await bus.publish('plaud.waiting', 'plaud', 'processing', 'Waiting for a new PLAUD recording; start make plaud')
         except Exception as exc:
             await bus.publish('error', 'opportunity', 'error', str(exc))
         finally:
@@ -99,14 +102,14 @@ async def process_transcript(payload):
         raise HTTPException(404, 'Unknown recording; register it against the active mission first')
     if mission['status'] != 'assigned':
         raise HTTPException(409, 'Mission already completed')
-    await bus.publish('plaud.transcript.ready', 'plaud', 'completed', 'Transcript received (demo reflection uses fixed fixture)')
-    await bus.publish('reflection.started', 'reflection', 'processing', 'Simulated reflection — no live BAND/model call')
+    await bus.publish('plaud.transcript.ready', 'plaud', 'completed', 'Transcript received' if BAND_MODE == 'live' else 'Transcript received (demo reflection uses fixed fixture)')
+    await bus.publish('reflection.started', 'reflection', 'processing', 'BAND analyzing transcript evidence' if BAND_MODE == 'live' else 'Simulated reflection — no live BAND/model call')
     try:
-        result = await band_client.reflection(mission, payload.recording_id, payload.transcript)
-        await bus.publish('reflection.completed', 'reflection', 'completed', 'Demo reflection validated')
+        result = await band_client.reflection(mission, payload.recording_id, payload.transcript, store.state()['skills'])
+        await bus.publish('reflection.completed', 'reflection', 'completed', 'BAND reflection validated' if BAND_MODE == 'live' else 'Demo reflection validated')
         await bus.publish('graph.updating', 'graph', 'processing', 'Applying deterministic score update')
         store.apply(result, payload.transcript)
-        await bus.publish('graph.updated', 'graph', 'completed', 'In-memory demo graph updated: application +14%')
+        await bus.publish('graph.updated', 'graph', 'completed', 'Learning graph updated using validated reflection')
         await bus.publish('learning_path.adapted', 'adapt', 'completed', result.next_target.reason)
     except Exception as exc:
         await bus.publish('error', 'reflection', 'error', str(exc))
@@ -114,15 +117,31 @@ async def process_transcript(payload):
     return {'status': 'completed', 'reflection': result.model_dump()}
 
 @app.post('/api/internal/plaud/recording', dependencies=[Depends(internal_token)])
-async def recording(payload: RecordingInput):
+async def recording(payload: RecordingInput, x_expected_mission_id: str | None = Header(default=None)):
+    global plaud_connected
     async with lock:
+        if x_expected_mission_id is not None:
+            mission = store.data['active_mission']
+            registered = store.recordings.get(payload.recording_id)
+            if (not mission or mission['id'] != x_expected_mission_id
+                    or registered and registered['mission_id'] != x_expected_mission_id):
+                raise HTTPException(409, 'Recording belongs to a different mission; pending delivery retained')
         try:
             created = store.record(payload.recording_id, payload.title)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
         if created:
+            plaud_connected = x_expected_mission_id is not None or plaud_connected
             await bus.publish('plaud.recording.detected', 'plaud', 'completed', payload.title, {'recording_id': payload.recording_id})
         return {'status': 'detected' if created else 'duplicate'}
+
+@app.post('/api/internal/plaud/status', dependencies=[Depends(internal_token)])
+async def bridge_status(payload: BridgeStatusInput):
+    global plaud_connected
+    plaud_connected = payload.status != 'error'
+    event = {'waiting': 'plaud.waiting', 'transcript_waiting': 'plaud.transcript.waiting', 'error': 'error'}[payload.status]
+    await bus.publish(event, 'plaud', 'error' if payload.status == 'error' else 'processing', payload.message)
+    return {'status': 'accepted'}
 
 @app.post('/api/internal/plaud/transcript', dependencies=[Depends(internal_token)])
 async def transcript(payload: TranscriptInput):

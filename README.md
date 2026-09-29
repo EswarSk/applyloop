@@ -1,7 +1,7 @@
 # ApplyLoop
 
 A shareable hackathon starter for turning learning into real-world practice.
-**The complete local demo runs today. Live BAND, Neo4j, and PLAUD integrations are team tasks, not completed integrations.**
+**The offline demo runs today. BAND agents and the automatic PLAUD bridge are implemented; real account/device verification is pending. Neo4j is the remaining storage workstream.**
 
 ## Run in three terminals
 
@@ -38,8 +38,8 @@ Do not edit another workstream's files without coordinating with the integrator.
 - `web/`: frontend dashboard, React Flow graph, and SSE listener.
 - `server/main.py`, `schemas.py`, `event_bus.py`: backend orchestration and validated boundaries.
 - `server/neo4j_store.py`: deterministic demo graph; Neo4j owner's replacement point.
-- `server/band_client.py`, `server/agents/`: BAND owner's replacement point and demo fixtures.
-- `server/plaud_bridge.py`: tested HTTP handoff; PLAUD owner adds CLI detection/retries.
+- `server/band_client.py`, `server/agents/`: BAND room routing, structured live agents, and offline fixtures.
+- `server/plaud_bridge.py`: automatic CLI watcher, transcript retries, and persistent delivery recovery.
 - `contracts/`: frozen API, runnable examples, and generated JSON Schema.
 - `docs/IMPLEMENTATION_GUIDE.md`: supplied design reference; see task board for the tighter one-hour scope.
 
@@ -47,7 +47,9 @@ Do not edit another workstream's files without coordinating with the integrator.
 
 Demo uses **in-memory storage, fixed agent fixtures, and an explicit prerecorded replay**.
 Reflection fixtures do not analyze arbitrary transcript text. No external-service activity is claimed as live.
-`DEMO_MODE=false` refuses startup until live storage and agent adapters are implemented.
+Set `BAND_MODE=live` with credentials to run real agents while keeping `DEMO_MODE=true` for memory storage.
+Follow [the BAND + PLAUD runbook](docs/BAND_PLAUD.md) for accounts, watcher startup, recovery, and Neo4j handoff.
+`DEMO_MODE=false` still refuses startup until the Neo4j teammate wires live storage.
 One backend process and one demo learner only; restarting loses state. Run only on localhost until hardening.
 Internal endpoints require `X-Internal-Token`; public reset/replay endpoints are intentionally local demo controls.
 Change the example token before exposing a backend. Never commit `.env` or PLAUD authentication.

@@ -1,4 +1,4 @@
-.PHONY: setup api web check replay
+.PHONY: setup api web check replay plaud plaud-retry plaud-install
 setup:
 	python3 -m venv .venv
 	.venv/bin/python -m pip install -r server/requirements.lock.txt
@@ -13,3 +13,9 @@ check:
 	cd web && npm run typecheck
 replay:
 	.venv/bin/python -m scripts.inject_demo_transcript
+plaud-install:
+	npm install -g @plaud-ai/cli@0.3.14
+plaud:
+	.venv/bin/python -m server.plaud_bridge
+plaud-retry:
+	.venv/bin/python -m server.plaud_bridge --retry-failed

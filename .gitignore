@@ -7,6 +7,8 @@ node_modules/
 __pycache__/
 *.pyc
 .plaud_bridge_state.json
+.plaud_bridge_state.json.*
+.firecrawl/
 dist/
 *.log
 .DS_Store

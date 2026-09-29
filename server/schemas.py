@@ -50,3 +50,7 @@ class RecordingInput(Payload):
 class TranscriptInput(Payload):
     recording_id: Identifier
     transcript: Annotated[str, Field(min_length=10, max_length=100000)]
+
+class BridgeStatusInput(Payload):
+    status: Literal['waiting', 'transcript_waiting', 'error']
+    message: Text

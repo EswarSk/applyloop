@@ -1,5 +1,6 @@
 """Small runnable proof of the full demo, trust boundary, and update invariants."""
 import unittest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from server.main import app
@@ -9,6 +10,12 @@ from server.demo_seed import example, SAMPLE_TRANSCRIPT
 from server.neo4j_store import DemoStore, application_delta
 
 class DemoProof(unittest.TestCase):
+    def setUp(self):
+        # Tests remain offline even when a developer configures live adapters in .env.
+        for target, value in [('server.main.DEMO_MODE', True), ('server.main.BAND_MODE', 'demo'),
+                              ('server.band_client.BAND_MODE', 'demo')]:
+            self.enterContext(patch(target, value))
+
     def test_demo_twice_and_boundaries(self):
         with TestClient(app) as client:
             for _ in range(2):

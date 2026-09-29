@@ -285,5 +285,31 @@
     ],
     "title": "TranscriptInput",
     "type": "object"
+  },
+  "BridgeStatusInput": {
+    "additionalProperties": false,
+    "properties": {
+      "status": {
+        "enum": [
+          "waiting",
+          "transcript_waiting",
+          "error"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "message": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Message",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "message"
+    ],
+    "title": "BridgeStatusInput",
+    "type": "object"
   }
 }

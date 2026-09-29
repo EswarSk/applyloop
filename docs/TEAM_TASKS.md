@@ -1,5 +1,7 @@
 # One-hour team plan
 
+**BAND + PLAUD code is now implemented on `feat/band-plaud`.** See [BAND_PLAUD.md](BAND_PLAUD.md) for startup, pending account/device verification, and the Neo4j merge boundary. The original work assignments below remain a reference for the team split.
+
 ## Before splitting — minutes 0–5
 
 Integrator shares this repo, assigns people, and runs `make setup`. Everyone agrees to [API.md](../contracts/API.md).
