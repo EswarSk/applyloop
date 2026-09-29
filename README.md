@@ -1,7 +1,7 @@
 # ApplyLoop
 
 A shareable hackathon starter for turning learning into real-world practice.
-**The complete local demo runs today. Live BAND, Neo4j, and PLAUD integrations are team tasks, not completed integrations.**
+**The complete local demo runs today. The Neo4j learner knowledge graph is implemented (set `NEO4J_URI`); live BAND and PLAUD integrations are still team tasks.**
 
 ## Run in three terminals
 
@@ -26,8 +26,32 @@ Reset and run again. No external accounts or secrets are needed in demo mode.
 `make replay` also exercises the exact internal recording/transcript endpoints the real bridge will use.
 `make check` runs backend checks and TypeScript validation. `cd web && npm run build` checks the production frontend.
 Dependencies are pinned in `server/requirements.lock.txt` and `web/package-lock.json`.
-`make web` loads root `.env`; when invoking Next.js directly, put frontend variables in `web/.env.local`.
+`make web` copies the `NEXT_PUBLIC_*` lines from root `.env` into `web/.env.local` (no secrets); when invoking Next.js directly, put frontend variables there.
 Backend OpenAPI documentation: http://localhost:8000/docs.
+
+## Neo4j learner knowledge graph
+
+The graph tracks, per learner: **every word learned and its status** (new → introduced → practiced → fluent),
+**the CEFR level** (A1, A2) and whether they are fluent at it, **lessons passed/attempted**, and **where they stopped**
+(the resume point). A word only becomes *fluent* after it is used correctly in real recordings, in 2+ different contexts,
+not just after a quiz. That knowledge-vs-application gap is what ApplyLoop exists to close.
+
+Without `NEO4J_URI` the same model runs in memory. To use Neo4j (a free Aura instance works):
+
+```sh
+# .env
+NEO4J_URI=neo4j+s://<id>.databases.neo4j.io
+NEO4J_PASSWORD=<password>
+```
+
+```sh
+make seed-graph   # reset + seed :ApplyLoop nodes only (curriculum, demo learner)
+make test-graph   # run the store tests against your Neo4j (resets :ApplyLoop nodes)
+make api          # the banner now says "Live Neo4j knowledge graph"
+```
+
+The API seeds an empty graph on startup, and **Reset demo** reseeds it. See [docs/NEO4J.md](docs/NEO4J.md)
+for the graph model and ready-to-paste Neo4j Browser queries for the pitch.
 
 ## Share and split
 
@@ -37,7 +61,9 @@ Do not edit another workstream's files without coordinating with the integrator.
 
 - `web/`: frontend dashboard, React Flow graph, and SSE listener.
 - `server/main.py`, `schemas.py`, `event_bus.py`: backend orchestration and validated boundaries.
-- `server/neo4j_store.py`: deterministic demo graph; Neo4j owner's replacement point.
+- `server/neo4j_store.py`: Neo4j knowledge graph store (all Cypher, one transaction per mutation).
+- `server/memory_store.py`: in-memory store with the same interface, used when `NEO4J_URI` is empty.
+- `server/learning_rules.py`, `server/data/curriculum_es.json`: fluency/level rules and the Spanish A1–A2 curriculum.
 - `server/band_client.py`, `server/agents/`: BAND owner's replacement point and demo fixtures.
 - `server/plaud_bridge.py`: tested HTTP handoff; PLAUD owner adds CLI detection/retries.
 - `contracts/`: frozen API, runnable examples, and generated JSON Schema.
@@ -45,7 +71,7 @@ Do not edit another workstream's files without coordinating with the integrator.
 
 ## Honest demo and current limits
 
-Demo uses **in-memory storage, fixed agent fixtures, and an explicit prerecorded replay**.
+Demo uses **fixed agent fixtures and an explicit prerecorded replay**; storage is Neo4j when `NEO4J_URI` is set, otherwise in-memory.
 Reflection fixtures do not analyze arbitrary transcript text. No external-service activity is claimed as live.
 `DEMO_MODE=false` refuses startup until live storage and agent adapters are implemented.
 One backend process and one demo learner only; restarting loses state. Run only on localhost until hardening.

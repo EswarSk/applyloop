@@ -1,4 +1,6 @@
 """Small runnable proof of the full demo, trust boundary, and update invariants."""
+import os
+os.environ['NEO4J_URI'] = ''  # always test the API against the in-memory store; see test_graph_store.py for Neo4j
 import unittest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError

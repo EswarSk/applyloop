@@ -187,6 +187,40 @@
         ],
         "title": "NextTarget",
         "type": "object"
+      },
+      "WordEvidence": {
+        "additionalProperties": false,
+        "description": "One vocabulary observation from a real-world transcript. word_id must exist in the curriculum.",
+        "properties": {
+          "word_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Word Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "used_correctly",
+              "used_incorrectly",
+              "not_understood"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "evidence": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Evidence",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word_id",
+          "outcome",
+          "evidence"
+        ],
+        "title": "WordEvidence",
+        "type": "object"
       }
     },
     "additionalProperties": false,
@@ -227,6 +261,14 @@
       },
       "next_target": {
         "$ref": "#/$defs/NextTarget"
+      },
+      "word_evidence": {
+        "items": {
+          "$ref": "#/$defs/WordEvidence"
+        },
+        "maxItems": 50,
+        "title": "Word Evidence",
+        "type": "array"
       }
     },
     "required": [
@@ -284,6 +326,38 @@
       "transcript"
     ],
     "title": "TranscriptInput",
+    "type": "object"
+  },
+  "LessonProgressInput": {
+    "additionalProperties": false,
+    "properties": {
+      "step": {
+        "maximum": 100,
+        "minimum": 0,
+        "title": "Step",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "step"
+    ],
+    "title": "LessonProgressInput",
+    "type": "object"
+  },
+  "LessonCompleteInput": {
+    "additionalProperties": false,
+    "properties": {
+      "score": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Score",
+        "type": "number"
+      }
+    },
+    "required": [
+      "score"
+    ],
+    "title": "LessonCompleteInput",
     "type": "object"
   }
 }

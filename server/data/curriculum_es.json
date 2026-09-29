@@ -1,0 +1,1079 @@
+{
+  "language": "es",
+  "levels": [
+    {
+      "code": "A1",
+      "name": "Beginner",
+      "order": 1
+    },
+    {
+      "code": "A2",
+      "name": "Elementary",
+      "order": 2
+    }
+  ],
+  "lessons": [
+    {
+      "id": "es-a1-01",
+      "order": 1,
+      "level": "A1",
+      "title": "Greetings & politeness",
+      "steps": 6,
+      "words": [
+        "hola",
+        "adios",
+        "gracias",
+        "por-favor",
+        "buenos-dias",
+        "buenas-noches",
+        "perdon"
+      ]
+    },
+    {
+      "id": "es-a1-02",
+      "order": 2,
+      "level": "A1",
+      "title": "Numbers & paying",
+      "steps": 6,
+      "words": [
+        "uno",
+        "dos",
+        "tres",
+        "la-cuenta",
+        "cuanto-cuesta",
+        "la-tarjeta",
+        "el-efectivo"
+      ]
+    },
+    {
+      "id": "es-a1-03",
+      "order": 3,
+      "level": "A1",
+      "title": "Ordering at a restaurant",
+      "steps": 8,
+      "words": [
+        "quiero",
+        "quisiera",
+        "el-menu",
+        "la-mesa",
+        "el-agua",
+        "la-cerveza",
+        "el-plato",
+        "para-mi"
+      ]
+    },
+    {
+      "id": "es-a1-04",
+      "order": 4,
+      "level": "A1",
+      "title": "Food & drinks",
+      "steps": 8,
+      "words": [
+        "el-pollo",
+        "la-carne",
+        "el-pescado",
+        "las-verduras",
+        "el-arroz",
+        "los-frijoles",
+        "el-taco",
+        "la-tortilla"
+      ]
+    },
+    {
+      "id": "es-a2-01",
+      "order": 5,
+      "level": "A2",
+      "title": "Restaurant follow-up questions",
+      "steps": 8,
+      "words": [
+        "picante",
+        "la-salsa",
+        "roja",
+        "verde",
+        "para-llevar",
+        "para-aqui",
+        "algo-mas",
+        "que-recomienda"
+      ]
+    },
+    {
+      "id": "es-a2-02",
+      "order": 6,
+      "level": "A2",
+      "title": "Asking for directions",
+      "steps": 6,
+      "words": [
+        "donde-esta",
+        "a-la-derecha",
+        "a-la-izquierda",
+        "todo-recto",
+        "cerca",
+        "lejos"
+      ]
+    },
+    {
+      "id": "es-a2-03",
+      "order": 7,
+      "level": "A2",
+      "title": "Small talk",
+      "steps": 6,
+      "words": [
+        "de-donde-eres",
+        "me-llamo",
+        "mucho-gusto",
+        "que-tal",
+        "me-gusta",
+        "tambien"
+      ]
+    },
+    {
+      "id": "es-a2-04",
+      "order": 8,
+      "level": "A2",
+      "title": "Classroom Spanish",
+      "steps": 6,
+      "words": [
+        "no-entiendo",
+        "como-se-dice",
+        "mas-despacio",
+        "que-significa",
+        "tengo-una-pregunta",
+        "la-tarea",
+        "otra-vez"
+      ]
+    },
+    {
+      "id": "es-a2-05",
+      "order": 9,
+      "level": "A2",
+      "title": "At the dance class",
+      "steps": 6,
+      "words": [
+        "bailar",
+        "la-musica",
+        "el-paso",
+        "que-divertido",
+        "estoy-cansado",
+        "vamos",
+        "me-encanta"
+      ]
+    }
+  ],
+  "words": [
+    {
+      "id": "hola",
+      "lemma": "hola",
+      "meaning": "hello",
+      "pos": "interjection"
+    },
+    {
+      "id": "adios",
+      "lemma": "adiós",
+      "meaning": "goodbye",
+      "pos": "interjection"
+    },
+    {
+      "id": "gracias",
+      "lemma": "gracias",
+      "meaning": "thank you",
+      "pos": "interjection"
+    },
+    {
+      "id": "por-favor",
+      "lemma": "por favor",
+      "meaning": "please",
+      "pos": "phrase"
+    },
+    {
+      "id": "buenos-dias",
+      "lemma": "buenos días",
+      "meaning": "good morning",
+      "pos": "phrase"
+    },
+    {
+      "id": "buenas-noches",
+      "lemma": "buenas noches",
+      "meaning": "good evening / night",
+      "pos": "phrase"
+    },
+    {
+      "id": "perdon",
+      "lemma": "perdón",
+      "meaning": "excuse me / sorry",
+      "pos": "interjection"
+    },
+    {
+      "id": "uno",
+      "lemma": "uno",
+      "meaning": "one",
+      "pos": "number"
+    },
+    {
+      "id": "dos",
+      "lemma": "dos",
+      "meaning": "two",
+      "pos": "number"
+    },
+    {
+      "id": "tres",
+      "lemma": "tres",
+      "meaning": "three",
+      "pos": "number"
+    },
+    {
+      "id": "la-cuenta",
+      "lemma": "la cuenta",
+      "meaning": "the bill",
+      "pos": "noun"
+    },
+    {
+      "id": "cuanto-cuesta",
+      "lemma": "¿cuánto cuesta?",
+      "meaning": "how much does it cost?",
+      "pos": "phrase"
+    },
+    {
+      "id": "la-tarjeta",
+      "lemma": "la tarjeta",
+      "meaning": "the card",
+      "pos": "noun"
+    },
+    {
+      "id": "el-efectivo",
+      "lemma": "el efectivo",
+      "meaning": "cash",
+      "pos": "noun"
+    },
+    {
+      "id": "quiero",
+      "lemma": "quiero",
+      "meaning": "I want",
+      "pos": "verb"
+    },
+    {
+      "id": "quisiera",
+      "lemma": "quisiera",
+      "meaning": "I would like",
+      "pos": "verb"
+    },
+    {
+      "id": "el-menu",
+      "lemma": "el menú",
+      "meaning": "the menu",
+      "pos": "noun"
+    },
+    {
+      "id": "la-mesa",
+      "lemma": "la mesa",
+      "meaning": "the table",
+      "pos": "noun"
+    },
+    {
+      "id": "el-agua",
+      "lemma": "el agua",
+      "meaning": "water",
+      "pos": "noun"
+    },
+    {
+      "id": "la-cerveza",
+      "lemma": "la cerveza",
+      "meaning": "beer",
+      "pos": "noun"
+    },
+    {
+      "id": "el-plato",
+      "lemma": "el plato",
+      "meaning": "the dish",
+      "pos": "noun"
+    },
+    {
+      "id": "para-mi",
+      "lemma": "para mí",
+      "meaning": "for me",
+      "pos": "phrase"
+    },
+    {
+      "id": "el-pollo",
+      "lemma": "el pollo",
+      "meaning": "chicken",
+      "pos": "noun"
+    },
+    {
+      "id": "la-carne",
+      "lemma": "la carne",
+      "meaning": "meat",
+      "pos": "noun"
+    },
+    {
+      "id": "el-pescado",
+      "lemma": "el pescado",
+      "meaning": "fish",
+      "pos": "noun"
+    },
+    {
+      "id": "las-verduras",
+      "lemma": "las verduras",
+      "meaning": "vegetables",
+      "pos": "noun"
+    },
+    {
+      "id": "el-arroz",
+      "lemma": "el arroz",
+      "meaning": "rice",
+      "pos": "noun"
+    },
+    {
+      "id": "los-frijoles",
+      "lemma": "los frijoles",
+      "meaning": "beans",
+      "pos": "noun"
+    },
+    {
+      "id": "el-taco",
+      "lemma": "el taco",
+      "meaning": "taco",
+      "pos": "noun"
+    },
+    {
+      "id": "la-tortilla",
+      "lemma": "la tortilla",
+      "meaning": "tortilla",
+      "pos": "noun"
+    },
+    {
+      "id": "picante",
+      "lemma": "picante",
+      "meaning": "spicy",
+      "pos": "adjective"
+    },
+    {
+      "id": "la-salsa",
+      "lemma": "la salsa",
+      "meaning": "the sauce / salsa",
+      "pos": "noun"
+    },
+    {
+      "id": "roja",
+      "lemma": "roja",
+      "meaning": "red",
+      "pos": "adjective"
+    },
+    {
+      "id": "verde",
+      "lemma": "verde",
+      "meaning": "green",
+      "pos": "adjective"
+    },
+    {
+      "id": "para-llevar",
+      "lemma": "para llevar",
+      "meaning": "to go",
+      "pos": "phrase"
+    },
+    {
+      "id": "para-aqui",
+      "lemma": "para aquí",
+      "meaning": "for here",
+      "pos": "phrase"
+    },
+    {
+      "id": "algo-mas",
+      "lemma": "¿algo más?",
+      "meaning": "anything else?",
+      "pos": "phrase"
+    },
+    {
+      "id": "que-recomienda",
+      "lemma": "¿qué recomienda?",
+      "meaning": "what do you recommend?",
+      "pos": "phrase"
+    },
+    {
+      "id": "donde-esta",
+      "lemma": "¿dónde está?",
+      "meaning": "where is?",
+      "pos": "phrase"
+    },
+    {
+      "id": "a-la-derecha",
+      "lemma": "a la derecha",
+      "meaning": "to the right",
+      "pos": "phrase"
+    },
+    {
+      "id": "a-la-izquierda",
+      "lemma": "a la izquierda",
+      "meaning": "to the left",
+      "pos": "phrase"
+    },
+    {
+      "id": "todo-recto",
+      "lemma": "todo recto",
+      "meaning": "straight ahead",
+      "pos": "phrase"
+    },
+    {
+      "id": "cerca",
+      "lemma": "cerca",
+      "meaning": "near",
+      "pos": "adverb"
+    },
+    {
+      "id": "lejos",
+      "lemma": "lejos",
+      "meaning": "far",
+      "pos": "adverb"
+    },
+    {
+      "id": "de-donde-eres",
+      "lemma": "¿de dónde eres?",
+      "meaning": "where are you from?",
+      "pos": "phrase"
+    },
+    {
+      "id": "me-llamo",
+      "lemma": "me llamo",
+      "meaning": "my name is",
+      "pos": "phrase"
+    },
+    {
+      "id": "mucho-gusto",
+      "lemma": "mucho gusto",
+      "meaning": "nice to meet you",
+      "pos": "phrase"
+    },
+    {
+      "id": "que-tal",
+      "lemma": "¿qué tal?",
+      "meaning": "how's it going?",
+      "pos": "phrase"
+    },
+    {
+      "id": "me-gusta",
+      "lemma": "me gusta",
+      "meaning": "I like",
+      "pos": "phrase"
+    },
+    {
+      "id": "tambien",
+      "lemma": "también",
+      "meaning": "also",
+      "pos": "adverb"
+    },
+    {
+      "id": "no-entiendo",
+      "lemma": "no entiendo",
+      "meaning": "I don't understand",
+      "pos": "phrase"
+    },
+    {
+      "id": "como-se-dice",
+      "lemma": "¿cómo se dice…?",
+      "meaning": "how do you say…?",
+      "pos": "phrase"
+    },
+    {
+      "id": "mas-despacio",
+      "lemma": "más despacio",
+      "meaning": "more slowly",
+      "pos": "phrase"
+    },
+    {
+      "id": "que-significa",
+      "lemma": "¿qué significa…?",
+      "meaning": "what does … mean?",
+      "pos": "phrase"
+    },
+    {
+      "id": "tengo-una-pregunta",
+      "lemma": "tengo una pregunta",
+      "meaning": "I have a question",
+      "pos": "phrase"
+    },
+    {
+      "id": "la-tarea",
+      "lemma": "la tarea",
+      "meaning": "homework",
+      "pos": "noun"
+    },
+    {
+      "id": "otra-vez",
+      "lemma": "otra vez",
+      "meaning": "again",
+      "pos": "phrase"
+    },
+    {
+      "id": "bailar",
+      "lemma": "bailar",
+      "meaning": "to dance",
+      "pos": "verb"
+    },
+    {
+      "id": "la-musica",
+      "lemma": "la música",
+      "meaning": "the music",
+      "pos": "noun"
+    },
+    {
+      "id": "el-paso",
+      "lemma": "el paso",
+      "meaning": "the step (dance move)",
+      "pos": "noun"
+    },
+    {
+      "id": "que-divertido",
+      "lemma": "¡qué divertido!",
+      "meaning": "how fun!",
+      "pos": "phrase"
+    },
+    {
+      "id": "estoy-cansado",
+      "lemma": "estoy cansado/a",
+      "meaning": "I'm tired",
+      "pos": "phrase"
+    },
+    {
+      "id": "vamos",
+      "lemma": "¡vamos!",
+      "meaning": "let's go!",
+      "pos": "interjection"
+    },
+    {
+      "id": "me-encanta",
+      "lemma": "me encanta",
+      "meaning": "I love (it)",
+      "pos": "phrase"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "restaurant",
+      "name": "Restaurant",
+      "words": [
+        "hola",
+        "gracias",
+        "por-favor",
+        "buenas-noches",
+        "la-cuenta",
+        "la-tarjeta",
+        "quiero",
+        "quisiera",
+        "el-menu",
+        "la-mesa",
+        "el-agua",
+        "el-plato",
+        "para-mi",
+        "el-pollo",
+        "el-taco",
+        "los-frijoles",
+        "picante",
+        "la-salsa",
+        "roja",
+        "verde",
+        "para-llevar",
+        "algo-mas",
+        "que-recomienda"
+      ],
+      "phrases": [
+        {
+          "id": "r-order",
+          "text": "Quiero el pollo, por favor.",
+          "meaning": "I'd like the chicken, please.",
+          "words": [
+            "quiero",
+            "el-pollo",
+            "por-favor"
+          ]
+        },
+        {
+          "id": "r-water",
+          "text": "Para mí, el agua.",
+          "meaning": "Water for me.",
+          "words": [
+            "para-mi",
+            "el-agua"
+          ]
+        },
+        {
+          "id": "r-bill",
+          "text": "La cuenta, por favor.",
+          "meaning": "The bill, please.",
+          "words": [
+            "la-cuenta",
+            "por-favor"
+          ]
+        },
+        {
+          "id": "r-card",
+          "text": "¿Con tarjeta o efectivo?",
+          "meaning": "Card or cash? (you'll hear this)",
+          "words": [
+            "la-tarjeta",
+            "el-efectivo"
+          ]
+        },
+        {
+          "id": "r-recommend",
+          "text": "¿Qué recomienda?",
+          "meaning": "What do you recommend?",
+          "words": [
+            "que-recomienda"
+          ]
+        },
+        {
+          "id": "r-salsa",
+          "text": "Salsa verde, por favor. ¿Es picante?",
+          "meaning": "Green salsa, please. Is it spicy?",
+          "words": [
+            "la-salsa",
+            "verde",
+            "por-favor",
+            "picante"
+          ]
+        },
+        {
+          "id": "r-togo",
+          "text": "Para llevar, gracias.",
+          "meaning": "To go, thanks.",
+          "words": [
+            "para-llevar",
+            "gracias"
+          ]
+        }
+      ],
+      "skill": "restaurant-ordering"
+    },
+    {
+      "id": "spanish-class",
+      "name": "Spanish class",
+      "words": [
+        "hola",
+        "buenos-dias",
+        "perdon",
+        "no-entiendo",
+        "como-se-dice",
+        "mas-despacio",
+        "que-significa",
+        "tengo-una-pregunta",
+        "la-tarea",
+        "otra-vez",
+        "gracias",
+        "por-favor"
+      ],
+      "phrases": [
+        {
+          "id": "c-hello",
+          "text": "¡Buenos días, profesora!",
+          "meaning": "Good morning, teacher!",
+          "words": [
+            "buenos-dias"
+          ]
+        },
+        {
+          "id": "c-lost",
+          "text": "Perdón, no entiendo.",
+          "meaning": "Sorry, I don't understand.",
+          "words": [
+            "perdon",
+            "no-entiendo"
+          ]
+        },
+        {
+          "id": "c-slow",
+          "text": "Más despacio, por favor.",
+          "meaning": "More slowly, please.",
+          "words": [
+            "mas-despacio",
+            "por-favor"
+          ]
+        },
+        {
+          "id": "c-question",
+          "text": "Tengo una pregunta.",
+          "meaning": "I have a question.",
+          "words": [
+            "tengo-una-pregunta"
+          ]
+        },
+        {
+          "id": "c-howsay",
+          "text": "¿Cómo se dice 'dance' en español?",
+          "meaning": "How do you say 'dance' in Spanish?",
+          "words": [
+            "como-se-dice"
+          ]
+        },
+        {
+          "id": "c-meaning",
+          "text": "¿Qué significa 'la tarea'?",
+          "meaning": "What does 'la tarea' mean?",
+          "words": [
+            "que-significa",
+            "la-tarea"
+          ]
+        },
+        {
+          "id": "c-again",
+          "text": "Otra vez, por favor.",
+          "meaning": "Again, please.",
+          "words": [
+            "otra-vez",
+            "por-favor"
+          ]
+        }
+      ],
+      "skill": "classroom-talk"
+    },
+    {
+      "id": "dance-class",
+      "name": "Dance class",
+      "words": [
+        "hola",
+        "me-llamo",
+        "mucho-gusto",
+        "de-donde-eres",
+        "me-gusta",
+        "me-encanta",
+        "bailar",
+        "la-musica",
+        "el-paso",
+        "otra-vez",
+        "mas-despacio",
+        "a-la-derecha",
+        "a-la-izquierda",
+        "que-divertido",
+        "estoy-cansado",
+        "vamos",
+        "gracias"
+      ],
+      "phrases": [
+        {
+          "id": "d-intro",
+          "text": "¡Hola! Me llamo … Mucho gusto.",
+          "meaning": "Hi! My name is … Nice to meet you.",
+          "words": [
+            "hola",
+            "me-llamo",
+            "mucho-gusto"
+          ]
+        },
+        {
+          "id": "d-where",
+          "text": "¿De dónde eres?",
+          "meaning": "Where are you from?",
+          "words": [
+            "de-donde-eres"
+          ]
+        },
+        {
+          "id": "d-music",
+          "text": "Me gusta la música.",
+          "meaning": "I like the music.",
+          "words": [
+            "me-gusta",
+            "la-musica"
+          ]
+        },
+        {
+          "id": "d-love",
+          "text": "¡Me encanta bailar!",
+          "meaning": "I love dancing!",
+          "words": [
+            "me-encanta",
+            "bailar"
+          ]
+        },
+        {
+          "id": "d-again",
+          "text": "Otra vez, más despacio, por favor.",
+          "meaning": "Again, more slowly, please.",
+          "words": [
+            "otra-vez",
+            "mas-despacio",
+            "por-favor"
+          ]
+        },
+        {
+          "id": "d-step",
+          "text": "¿El paso a la derecha o a la izquierda?",
+          "meaning": "Is the step to the right or left?",
+          "words": [
+            "el-paso",
+            "a-la-derecha",
+            "a-la-izquierda"
+          ]
+        },
+        {
+          "id": "d-fun",
+          "text": "¡Qué divertido!",
+          "meaning": "How fun!",
+          "words": [
+            "que-divertido"
+          ]
+        },
+        {
+          "id": "d-tired",
+          "text": "Estoy cansada, ¡pero vamos!",
+          "meaning": "I'm tired, but let's go!",
+          "words": [
+            "estoy-cansado",
+            "vamos"
+          ]
+        }
+      ],
+      "skill": "dance-small-talk"
+    },
+    {
+      "id": "street",
+      "name": "Getting around",
+      "words": [
+        "perdon",
+        "donde-esta",
+        "a-la-derecha",
+        "a-la-izquierda",
+        "todo-recto",
+        "cerca",
+        "lejos",
+        "gracias"
+      ],
+      "phrases": []
+    }
+  ],
+  "skill_words": {
+    "restaurant-ordering": [
+      "quiero",
+      "quisiera",
+      "el-menu",
+      "el-agua",
+      "el-plato",
+      "para-mi",
+      "la-cuenta",
+      "por-favor"
+    ],
+    "follow-up-questions": [
+      "la-salsa",
+      "roja",
+      "verde",
+      "picante",
+      "algo-mas",
+      "para-llevar",
+      "que-recomienda"
+    ],
+    "classroom-talk": [
+      "no-entiendo",
+      "como-se-dice",
+      "mas-despacio",
+      "que-significa",
+      "tengo-una-pregunta",
+      "otra-vez"
+    ],
+    "dance-small-talk": [
+      "me-llamo",
+      "mucho-gusto",
+      "de-donde-eres",
+      "me-gusta",
+      "la-musica",
+      "que-divertido",
+      "otra-vez"
+    ]
+  },
+  "learner_seed": {
+    "completed": {
+      "es-a1-01": 0.95,
+      "es-a1-02": 0.88,
+      "es-a1-03": 0.91,
+      "es-a1-04": 0.84
+    },
+    "current": {
+      "lesson_id": "es-a2-01",
+      "step": 3
+    },
+    "real_uses": {
+      "hola": [
+        "cafe-001",
+        "market-001"
+      ],
+      "gracias": [
+        "cafe-001",
+        "market-001"
+      ],
+      "buenos-dias": [
+        "cafe-001",
+        "market-001"
+      ],
+      "por-favor": [
+        "cafe-001"
+      ],
+      "quiero": [
+        "cafe-001"
+      ],
+      "el-agua": [
+        "cafe-001"
+      ],
+      "no-entiendo": [
+        "class-001"
+      ],
+      "mas-despacio": [
+        "class-001"
+      ],
+      "me-llamo": [
+        "dance-001"
+      ]
+    }
+  },
+  "activities": [
+    {
+      "id": "dinner-001",
+      "title": "Dinner at Mexican restaurant",
+      "scenario": "restaurant",
+      "location": "San Francisco",
+      "when": "Tonight · 7:00 PM",
+      "starts_at": "2026-09-29T19:00:00-07:00",
+      "with_whom": "Waiter"
+    },
+    {
+      "id": "class-001",
+      "title": "Spanish class",
+      "scenario": "spanish-class",
+      "location": "Community center",
+      "when": "Tuesdays · 6:00 PM",
+      "with_whom": "Profesora Lucía"
+    },
+    {
+      "id": "dance-001",
+      "title": "Dance class",
+      "scenario": "dance-class",
+      "location": "Mission District studio",
+      "when": "Thursdays · 8:00 PM",
+      "with_whom": "Instructor Diego, from Mexico"
+    }
+  ],
+  "demo_missions": {
+    "classroom-talk": {
+      "title": "Ask, don't freeze, in Spanish class",
+      "challenge": "Ask Profesora Lucía one question in Spanish and ask her to repeat or slow down at least once.",
+      "reason": "You know classroom phrases from real class time, but you still switch to English when you get lost."
+    },
+    "dance-small-talk": {
+      "title": "Small talk with Diego at dance class",
+      "challenge": "Introduce yourself to Diego in Spanish, ask where he is from, and tell him what you like about the class.",
+      "reason": "Diego is a native speaker you see every week, and you know small-talk words you have never used with him."
+    }
+  },
+  "demo_replays": {
+    "classroom-talk": {
+      "transcript": "In Spanish class I said 'tengo una pregunta' and asked '¿cómo se dice homework?'. Profesora Lucía said 'la tarea' and then asked me to say it again, but I did not understand 'otra vez'. When I got lost I said 'no entiendo, más despacio por favor' and she slowed down.",
+      "reflection": {
+        "success_score": 0.66,
+        "demonstrated": [
+          {
+            "skill_id": "classroom-talk",
+            "evidence": "Asked a question and asked the teacher to slow down in Spanish.",
+            "confidence": 0.9
+          }
+        ],
+        "gaps": [
+          {
+            "skill_id": "classroom-talk",
+            "name": "Understanding teacher instructions",
+            "evidence": "Did not understand 'otra vez' when asked to repeat.",
+            "confidence": 0.85
+          }
+        ],
+        "next_target": {
+          "skill_id": "classroom-talk",
+          "reason": "You can ask for help now; next, recognise the teacher's instructions like 'otra vez'."
+        },
+        "word_evidence": [
+          {
+            "word_id": "tengo-una-pregunta",
+            "outcome": "used_correctly",
+            "evidence": "Said 'tengo una pregunta' to the teacher."
+          },
+          {
+            "word_id": "como-se-dice",
+            "outcome": "used_correctly",
+            "evidence": "Asked '¿cómo se dice homework?'."
+          },
+          {
+            "word_id": "no-entiendo",
+            "outcome": "used_correctly",
+            "evidence": "Said 'no entiendo' when lost."
+          },
+          {
+            "word_id": "mas-despacio",
+            "outcome": "used_correctly",
+            "evidence": "Asked 'más despacio, por favor'."
+          },
+          {
+            "word_id": "otra-vez",
+            "outcome": "not_understood",
+            "evidence": "Did not understand 'otra vez' from the teacher."
+          }
+        ]
+      }
+    },
+    "dance-small-talk": {
+      "transcript": "At dance class I told Diego 'me llamo Nikki, mucho gusto' and asked '¿de dónde eres?'. He said he is from Guadalajara. I said 'me gusta la música'. When he shouted 'otra vez, a la izquierda' I did not catch it and just followed the others.",
+      "reflection": {
+        "success_score": 0.74,
+        "demonstrated": [
+          {
+            "skill_id": "dance-small-talk",
+            "evidence": "Introduced herself and asked where Diego is from in Spanish.",
+            "confidence": 0.92
+          }
+        ],
+        "gaps": [
+          {
+            "skill_id": "dance-small-talk",
+            "name": "Following instructions during the dance",
+            "evidence": "Missed 'otra vez, a la izquierda' while dancing.",
+            "confidence": 0.83
+          }
+        ],
+        "next_target": {
+          "skill_id": "dance-small-talk",
+          "reason": "Small talk works; next, catch fast instructions like 'otra vez' and 'a la izquierda'."
+        },
+        "word_evidence": [
+          {
+            "word_id": "me-llamo",
+            "outcome": "used_correctly",
+            "evidence": "Said 'me llamo Nikki'."
+          },
+          {
+            "word_id": "mucho-gusto",
+            "outcome": "used_correctly",
+            "evidence": "Said 'mucho gusto' to Diego."
+          },
+          {
+            "word_id": "de-donde-eres",
+            "outcome": "used_correctly",
+            "evidence": "Asked Diego '¿de dónde eres?'."
+          },
+          {
+            "word_id": "me-gusta",
+            "outcome": "used_correctly",
+            "evidence": "Said 'me gusta la música'."
+          },
+          {
+            "word_id": "la-musica",
+            "outcome": "used_correctly",
+            "evidence": "Said 'me gusta la música'."
+          },
+          {
+            "word_id": "otra-vez",
+            "outcome": "not_understood",
+            "evidence": "Missed 'otra vez' during the dance."
+          },
+          {
+            "word_id": "a-la-izquierda",
+            "outcome": "not_understood",
+            "evidence": "Missed 'a la izquierda' during the dance."
+          }
+        ]
+      }
+    }
+  }
+}

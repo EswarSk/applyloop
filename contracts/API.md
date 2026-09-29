@@ -14,6 +14,11 @@ Base: `http://localhost:8000`. JSON names match the supplied guide. Examples liv
 | POST `/api/internal/plaud/recording` | `{recording_id,title}` | `{status:"detected"}` or `"duplicate"`; binds to active mission |
 | POST `/api/internal/plaud/transcript` | `{recording_id,transcript}` | `{status:"completed",reflection}` or `{status:"duplicate"}`; unknown recording 404 |
 | POST `/api/demo/replay` | — | explicitly labeled demo fixture via same reflection/update path; create mission first |
+| GET `/api/activities` | — | per activity (Spanish class, restaurant, dance class): `pick_up` (where you left off there), `last_visit`, `can_say` / `almost` phrases, `practice` words, `lesson` to do before going |
+| POST `/api/activities/{id}/start` | — | "I'm going now": makes the activity the mission context; archives a completed mission. 404 unknown, 409 mission in progress |
+| GET `/api/learner/progress` | — | level (current, fluent_level, per-level learned/fluent %), resume point, lessons with status, words with status, counts |
+| POST `/api/lessons/{id}/progress` | `{step}` | progress; saves the resume point, introduces the lesson's words. 404 unknown, 409 locked / step past end |
+| POST `/api/lessons/{id}/complete` | `{score}` | `{passed, progress}`; score ≥ .7 passes: words → practiced, resume → next lesson. Fail resets to step 0 |
 | GET `/api/events` | — | SSE `id:` and `data:` JSON Activity, keepalive every 15s |
 
 Internal endpoints require `X-Internal-Token` matching `.env` `INTERNAL_API_TOKEN`; invalid token is 401.
@@ -32,3 +37,16 @@ Event status: processing/completed/error. Event types follow section 7.5 of the 
 SSE replays the last 100 events on reconnect; deduplicate by event ID. History is in memory, not a durable log.
 Clients refetch state/graph on connection and relevant events. Reset event discards prior UI activity.
 Single process / single learner demo only. For multi-worker deployment, add durable event coordination.
+
+## Learner knowledge graph (vocabulary, level, resume point)
+
+`ReflectionResult.word_evidence` (optional, default `[]`): `{word_id, outcome, evidence}` with outcome
+`used_correctly | used_incorrectly | not_understood`. Unknown word IDs reject the whole reflection (nothing changes).
+Word status: `new → introduced` (lesson started) `→ practiced` (lesson passed or one real use) `→ fluent`
+(correct real-world use in ≥2 recordings across ≥2 distinct contexts). Struggles never demote a word.
+Level: highest consecutive CEFR level with ≥80% of its words practiced; `fluent_level` needs ≥50% fluent.
+State adds `graph_backend` (`neo4j` | `memory`) and `focus_words` (practiced-but-not-fluent words the current context needs).
+New event stage `learn` (types `lesson.progress`, `lesson.completed`) and event `vocabulary.updated` (stage `graph`).
+Rules live in `server/learning_rules.py`; agents never set statuses, scores or levels.
+Activities: `(:Learner)-[:DOES]->(:Activity:Context)-[:IS_A]->(:Scenario)`; demo missions and replays are chosen per activity
+(skill). Replay recording IDs are `replay-<mission id>`, so each mission has at most one replay.
