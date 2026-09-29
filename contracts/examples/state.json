@@ -13,6 +13,18 @@
       "name": "Restaurant follow-up questions",
       "knowledge_score": 0.61,
       "application_score": 0.18
+    },
+    {
+      "id": "classroom-talk",
+      "name": "Classroom conversation",
+      "knowledge_score": 0.55,
+      "application_score": 0.3
+    },
+    {
+      "id": "dance-small-talk",
+      "name": "Small talk at dance class",
+      "knowledge_score": 0.48,
+      "application_score": 0.1
     }
   ],
   "active_mission": null,

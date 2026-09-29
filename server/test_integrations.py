@@ -21,6 +21,8 @@ from server.agents.model import strict_schema
 from server.demo_seed import example, SAMPLE_TRANSCRIPT
 from server.settings import INTERNAL_API_TOKEN
 from server.schemas import Mission
+from server.learning_rules import curriculum
+from server.memory_store import DemoStore
 
 ENV = {'OPENAI_API_KEY': 'test-provider-key',
        'BAND_OPPORTUNITY_AGENT_ID': '00000000-0000-4000-8000-000000000001',
@@ -36,7 +38,9 @@ def reflection_result(payload):
     result['gaps'][0]['evidence'] = 'I could not understand the question and switched to English.'
     excerpts = payload['transcript'] if isinstance(payload['transcript'], list) else [
         {'evidence_id': i, 'text': text} for i, text in enumerate(transcript_excerpts(payload['transcript']))]
-    for item in result['demonstrated'] + result['gaps']:
+    for item in result['word_evidence']:
+        item['evidence'] = result['demonstrated'][0]['evidence'] if item['outcome'] == 'used_correctly' else result['gaps'][0]['evidence']
+    for item in result['demonstrated'] + result['gaps'] + result['word_evidence']:
         quote = item.pop('evidence')
         item['evidence_id'] = next(e['evidence_id'] for e in excerpts if quote in e['text'])
     return result
@@ -107,7 +111,7 @@ class AgentProof(unittest.IsolatedAsyncioTestCase):
                 mission = await runtime.invoke('opportunity', example('state'))
                 self.assertEqual(mission['status'], 'assigned')
                 result = await runtime.invoke('reflection', {'mission': mission, 'recording_id': 'new',
-                    'transcript': SAMPLE_TRANSCRIPT, 'skills': example('state')['skills']})
+                    'transcript': SAMPLE_TRANSCRIPT, 'skills': example('state')['skills'], 'words': curriculum()['words']})
                 self.assertEqual(result['recording_id'], 'new')
                 self.assertEqual(len(harness.messages), 4)
                 self.assertEqual(len(harness.events), 4)
@@ -133,12 +137,14 @@ class AgentProof(unittest.IsolatedAsyncioTestCase):
 
     async def test_model_validation_and_failure(self):
         payload = {'mission': example('mission'), 'recording_id': 'new',
-                   'transcript': SAMPLE_TRANSCRIPT, 'skills': example('state')['skills']}
+                   'transcript': SAMPLE_TRANSCRIPT, 'skills': example('state')['skills'], 'words': curriculum()['words']}
         with patch.dict(os.environ, ENV):
             for mutate in (lambda r: r.update(recording_id='wrong'),
                            lambda r: r.update(success_score=1.1),
                            lambda r: r['next_target'].update(skill_id='unknown'),
-                           lambda r: r['demonstrated'][0].update(evidence_id=999999)):
+                           lambda r: r['demonstrated'][0].update(evidence_id=999999),
+                           lambda r: r['word_evidence'][0].update(word_id='unknown'),
+                           lambda r: r['word_evidence'][0].update(evidence_id=999999)):
                 result = reflection_result(payload); mutate(result)
                 async with httpx.AsyncClient(transport=httpx.MockTransport(lambda req: httpx.Response(200,
                         json={'choices': [{'message': {'content': json.dumps(result)}}]}))) as client:
@@ -161,7 +167,7 @@ class AgentProof(unittest.IsolatedAsyncioTestCase):
     async def test_insufficient_transcript_allows_no_observations(self):
         payload = {'mission': example('mission'), 'recording_id': 'test-recording',
                    'transcript': '[00:00 - 00:03] Speaker 1: Testing the recorder.',
-                   'skills': example('state')['skills']}
+                   'skills': example('state')['skills'], 'words': curriculum()['words']}
         result = {'mission_id': payload['mission']['id'], 'recording_id': payload['recording_id'],
                   'success_score': 0, 'demonstrated': [], 'gaps': [],
                   'next_target': {'skill_id': payload['mission']['skill_id'],
@@ -179,7 +185,7 @@ class AgentProof(unittest.IsolatedAsyncioTestCase):
     async def test_multilingual_evidence_is_copied_from_source(self):
         transcript = '[00:00 - 00:03] Speaker 1: मुझे समझ नहीं आया।'
         payload = {'mission': example('mission'), 'recording_id': 'multilingual',
-                   'transcript': transcript, 'skills': example('state')['skills']}
+                   'transcript': transcript, 'skills': example('state')['skills'], 'words': curriculum()['words']}
         result = {'mission_id': payload['mission']['id'], 'recording_id': payload['recording_id'],
                   'success_score': .2, 'demonstrated': [], 'gaps': [{
                       'skill_id': payload['mission']['skill_id'], 'name': 'Understanding the response',
@@ -205,6 +211,9 @@ def files_output(recordings, page=1):
 
 
 class BridgeProof(unittest.TestCase):
+    def make_store(self):
+        return DemoStore()
+
     def test_full_flow_restart_duplicates_and_mission_guard(self):
         harnesses = []
         @asynccontextmanager
@@ -223,7 +232,7 @@ class BridgeProof(unittest.TestCase):
                 Path(args[-1]).write_text(SAMPLE_TRANSCRIPT)
             return 'No "transaction" transcript for this recording. Available: (none).'
         with TemporaryDirectory() as directory, patch.dict(os.environ, ENV), \
-                patch.object(main, 'DEMO_MODE', True), patch.object(main, 'BAND_MODE', 'live'), \
+                patch.object(main, 'store', self.make_store()), patch.object(main, 'DEMO_MODE', True), patch.object(main, 'BAND_MODE', 'live'), \
                 patch.object(band_client, 'BAND_MODE', 'live'), patch.object(band_client.BandRuntime, 'connect', connected), \
                 patch.object(bridge, 'run_cli', side_effect=cli), \
                 TestClient(main.app, headers={'X-Internal-Token': INTERNAL_API_TOKEN}) as client:
@@ -241,6 +250,7 @@ class BridgeProof(unittest.TestCase):
             watcher.state.pending['new'].next_attempt = 0
             ready = True
             # Backend commits but response is lost: restart must retry and deduplicate.
+            previous = watcher.state.pending['new'].mission_id
             original_submit = backend.submit
             def lost_response(rid, text):
                 original_submit(rid, text)
@@ -248,6 +258,9 @@ class BridgeProof(unittest.TestCase):
             with patch.object(backend, 'submit', side_effect=lost_response):
                 watcher.poll()
             self.assertIn('new', watcher.state.pending)
+            # A new activity and backend restart must not prevent acknowledgement of committed evidence.
+            self.assertEqual(client.post('/api/activities/dance-001/start').status_code, 200)
+            self.verify_persistence(client)
             watcher = bridge.Watcher(path, backend)
             watcher.state.pending['new'].next_attempt = 0
             watcher.poll()
@@ -256,18 +269,25 @@ class BridgeProof(unittest.TestCase):
             state = client.get('/api/state').json()
             self.assertEqual(state['skills'][0]['application_score'], .39)
             self.assertEqual(state['services']['band'], 'live')
-            self.assertEqual(state['services']['storage'], 'memory')
+            self.assertEqual(state['services']['storage'], main.store.backend)
+            words = {w['id']: w for w in client.get('/api/learner/progress').json()['words']}
+            self.assertEqual(words['quiero']['real_uses'], 2)
+            self.verify_persistence(client)
             self.assertEqual(sum(n['type'] == 'experience' for n in client.get('/api/graph').json()['nodes']), 1)
             self.assertEqual(len(harnesses[0].messages), 4)
-            previous = state['active_mission']['id']
-            client.post('/api/demo/reset'); client.post('/api/opportunity')
+            self.assertEqual(client.post('/api/activities/dance-001/start').status_code, 200)
+            self.assertEqual(sum(n['type'] == 'experience' for n in client.get('/api/graph').json()['nodes']), 1)
+            client.post('/api/opportunity')
             response = client.post('/api/internal/plaud/recording', json={'recording_id': 'stale', 'title': 'Old mission'},
                                    headers={'X-Expected-Mission-ID': previous})
             self.assertEqual(response.status_code, 409)
-            self.assertNotIn('stale', main.store.recordings)
+            self.assertIsNone(main.store.recording('stale'))
             self.assertEqual(client.post('/api/internal/plaud/status', json={'status': 'waiting', 'message': 'Ready'},
                                         headers={'X-Internal-Token': 'bad'}).status_code, 401)
             client.post('/api/demo/reset')
+
+    def verify_persistence(self, client):
+        pass
 
     def test_cli_parsing_timeouts_and_transcript_readiness(self):
         self.assertEqual(bridge.parse_files(files_output({'id-1': 'Spanish practice'})), {'id-1': 'Spanish practice'})
@@ -328,6 +348,23 @@ class BridgeProof(unittest.TestCase):
                 watcher.poll()
             self.assertEqual(watcher.state.processed, ['new'])
             self.assertEqual([status for status, message in notices], ['waiting'])
+
+
+@unittest.skipUnless(os.getenv('NEO4J_TEST_URI'), 'requires a dedicated Neo4j test database')
+class Neo4jBridgeProof(BridgeProof):
+    def make_store(self):
+        from server.test_graph_store import test_neo4j_store
+        store = test_neo4j_store()
+        return store
+
+    def verify_persistence(self, client):
+        # Reopen the actual driver/store, as the backend does after a restart.
+        original = client.get('/api/state').json()
+        main.store.close()
+        main.store = self.make_store()
+        main.store.connect()
+        self.assertEqual(client.get('/api/state').json(), original)
+        self.assertTrue(main.store.has_experience('new'))
 
 
 if __name__ == '__main__':

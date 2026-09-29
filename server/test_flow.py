@@ -1,8 +1,10 @@
 """Small runnable proof of the full demo, trust boundary, and update invariants."""
+import os
 import unittest
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from server import main
 from server.main import app
 from server.settings import INTERNAL_API_TOKEN
 from server.schemas import ReflectionResult
@@ -12,6 +14,7 @@ from server.neo4j_store import DemoStore, application_delta
 class DemoProof(unittest.TestCase):
     def setUp(self):
         # Tests remain offline even when a developer configures live adapters in .env.
+        self.enterContext(patch.object(main, 'store', DemoStore()))
         for target, value in [('server.main.DEMO_MODE', True), ('server.main.BAND_MODE', 'demo'),
                               ('server.band_client.BAND_MODE', 'demo')]:
             self.enterContext(patch(target, value))
@@ -48,6 +51,16 @@ class DemoProof(unittest.TestCase):
             client.post('/api/opportunity')
             self.assertEqual(client.post('/api/demo/replay').status_code, 200)
             self.assertEqual(client.post('/api/demo/replay').json()['status'], 'duplicate')
+
+    def test_live_storage_and_demo_controls(self):
+        with patch.object(main, 'DEMO_MODE', False), patch.object(main, 'NEO4J_URI', ''):
+            with self.assertRaisesRegex(RuntimeError, 'Live storage requires'):
+                with TestClient(app):
+                    self.fail('Startup should fail without persistent storage')
+        with patch.object(main, 'DEMO_MODE', False), patch.object(main, 'NEO4J_URI', 'test-configured'):
+            with TestClient(app) as client:
+                self.assertEqual(client.post('/api/demo/reset').status_code, 404)
+                self.assertEqual(client.post('/api/demo/replay').status_code, 404)
 
     def test_score_and_reference_invariants(self):
         self.assertEqual([application_delta(x) for x in [.8, .6, .4, .39]], [.15, .14, .08, .03])

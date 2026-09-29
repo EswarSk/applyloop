@@ -35,6 +35,12 @@ class NextTarget(Payload):
     skill_id: Identifier
     reason: Text
 
+class WordEvidence(Payload):
+    """One vocabulary observation from a real-world transcript. word_id must exist in the curriculum."""
+    word_id: Identifier
+    outcome: Literal['used_correctly', 'used_incorrectly', 'not_understood']
+    evidence: Text
+
 class ReflectionResult(Payload):
     mission_id: Identifier
     recording_id: Identifier
@@ -42,6 +48,7 @@ class ReflectionResult(Payload):
     demonstrated: list[Demonstration] = Field(max_length=20)
     gaps: list[Gap] = Field(max_length=20)
     next_target: NextTarget
+    word_evidence: list[WordEvidence] = Field(default_factory=list, max_length=50)
 
 class RecordingInput(Payload):
     recording_id: Identifier
@@ -50,6 +57,12 @@ class RecordingInput(Payload):
 class TranscriptInput(Payload):
     recording_id: Identifier
     transcript: Annotated[str, Field(min_length=10, max_length=100000)]
+
+class LessonProgressInput(Payload):
+    step: Annotated[int, Field(ge=0, le=100)]
+
+class LessonCompleteInput(Payload):
+    score: Score
 
 class BridgeStatusInput(Payload):
     status: Literal['waiting', 'transcript_waiting', 'error']

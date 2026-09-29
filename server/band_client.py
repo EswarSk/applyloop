@@ -171,10 +171,10 @@ async def opportunity(state):
     return Mission.model_validate(await runtime.invoke('opportunity', state))
 
 
-async def reflection(mission, recording_id, transcript, skills=None):
+async def reflection(mission, recording_id, transcript, skills=None, words=None):
     if BAND_MODE == 'demo':
         return await demo_reflection(mission, recording_id, transcript)
     if runtime is None:
         raise RuntimeError('Live BAND runtime is not connected')
     return ReflectionResult.model_validate(await runtime.invoke('reflection', {
-        'mission': mission, 'recording_id': recording_id, 'transcript': transcript, 'skills': skills or []}))
+        'mission': mission, 'recording_id': recording_id, 'transcript': transcript, 'skills': skills or [], 'words': words or []}))

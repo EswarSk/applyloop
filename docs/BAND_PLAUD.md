@@ -1,6 +1,6 @@
 # BAND + PLAUD implementation and runbook
 
-Implemented on `feat/band-plaud`. Authenticated BAND and PLAUD transcript delivery were verified locally on September 29, 2026; durable Neo4j acceptance remains pending. Automated checks use simulated vendor transport and make no network calls.
+Integrated on `feat/neo4j-band-integration` with the Neo4j work from PR #2. Earlier authenticated BAND/PLAUD verification used memory storage. The combined flow now passes against real local Neo4j using simulated vendor transport; combined Aura/account/device verification awaits credentials.
 
 ## Completed plan
 
@@ -33,13 +33,13 @@ BAND_REFLECTION_API_KEY=<reflection key>
 INTERNAL_API_TOKEN=<your random local shared token>
 ```
 
-Keep `.env` local. `DEMO_MODE=true` retains the existing **memory store** while BAND runs live. `BAND_MODE=demo` runs the offline fixtures. Live BAND never silently falls back to fixtures. Missing credentials or invalid IDs fail startup.
+Keep `.env` local. `NEO4J_URI` selects persistent Neo4j storage; an empty URI uses memory. `DEMO_MODE=true` enables demo reset/replay; `DEMO_MODE=false` requires Neo4j and hides those controls. `BAND_MODE=demo` runs the offline fixtures. Live BAND never silently falls back to fixtures. Missing credentials or invalid IDs fail startup.
 
 Start `make api` and `make web` in separate terminals. API startup connects both agents and creates a room, logging its ID. Open BAND to inspect their request/reply messages and action events. To reuse an existing room, set `BAND_ROOM_ID` to its UUID and ensure both agents are participants. Use one API worker; the SDK permits one active connection per agent.
 
 Click **Find opportunity**. BAND routes a request to the Opportunity agent. It selects a supplied skill/context and returns an assigned mission. The app, rather than the model, assigns the mission ID.
 
-The Reflection agent receives the registered mission, transcript, recording ID, and existing skills. The model selects numbered transcript excerpts for demonstrations/gaps; the backend copies the original excerpts into the existing reflection contract. This preserves quotes across languages without asking the model to reproduce text or timestamps. Excerpts follow utterance/sentence boundaries, with long excerpts split at the existing 2,000-character evidence limit. Unsupported observations may be empty; missing evidence is never itself a skill gap. Unknown references, mismatched IDs, nonfinite/out-of-range scores, refusals, and malformed results fail before any graph mutation.
+The Reflection agent receives the registered mission, transcript, recording ID, existing skills and curriculum words. The model selects numbered transcript excerpts for demonstrations, gaps and word evidence; the backend copies the original excerpts into the existing reflection contract. This preserves quotes across languages without asking the model to reproduce text or timestamps. Excerpts follow utterance/sentence boundaries, with long excerpts split at the existing 2,000-character evidence limit. Unsupported observations may be empty; missing evidence is never itself a skill gap. Unknown references, mismatched IDs, nonfinite/out-of-range scores, refusals, and malformed results fail before any graph mutation.
 
 The agents share the API process and its pending request registry. BAND carries correlated request/reply messages; full transcripts stay in the process and go to the model provider, while validated reflection quotes/results are visible in the BAND room. Human room messages cannot initiate a job or mutate the graph. No private model reasoning is posted. Splitting these agents onto different hosts would require a durable job transport; this implementation intentionally keeps the single-process architecture.
 
@@ -73,8 +73,8 @@ State is stored atomically in `.plaud_bridge_state.json` with private file permi
 | Retry limit reached | Pending recording is retained. Stop the watcher and run `make plaud-retry` once PLAUD finishes transcription. |
 | Network/BAND/backend failure | Pending delivery is retained and retried; successful backend mutations deduplicate by recording ID. |
 | Authentication failure | Watcher stops with a useful error. Run `plaud login` or fix the shared internal token, then restart. |
-| Mission completed/changed/reset before delivery | Registration returns 409. Evidence is retained and paused for review; the watcher stays connected for future recordings. It is never attached to a new mission. Inspect the old task before using `make plaud-retry`; don't delete state to force reassignment. |
-| API restarts with memory storage | The API loses missions/recording bindings; watcher persistence cannot restore them. Restart recovery across API restarts requires the teammate's durable Neo4j store. |
+| Mission completed/changed/reset before delivery | Previously registered evidence retains its original binding; already committed evidence can still be acknowledged after switching activities. Unregistered stale evidence or incomplete evidence for a completed mission returns 409. Evidence is retained and paused for review; the watcher stays connected for future recordings. It is never attached to a new mission. Inspect the old task before using `make plaud-retry`; don't delete state to force reassignment. |
+| API restarts with memory storage | The API loses missions/recording bindings; watcher persistence cannot restore them. Set `NEO4J_URI` to preserve these bindings across API restarts. |
 | Corrupt or older bridge state | Startup fails without replacing the file. Preserve it for recovery; the supported schema is version 1. |
 | CLI output changes | Install the supported 0.3.14 version; the watcher refuses unfamiliar output. |
 | Large account | Each poll scans the full account. Increase `PLAUD_POLL_SECONDS` if slow. CLI pagination is capped at 100,000 records and names are truncated by the CLI. |
@@ -82,16 +82,19 @@ State is stored atomically in `.plaud_bridge_state.json` with private file permi
 
 `BAND_REQUEST_TIMEOUT_SECONDS` defaults to 120 and covers each room request/reply. Model calls have a maximum 90-second HTTP timeout; PLAUD subprocess commands time out after 40 seconds. Bridge HTTP calls allow 180 seconds for reflection/graph completion.
 
-## Neo4j teammate boundary
+## Neo4j integration
 
-No changes were made to `server/neo4j_store.py`, score math, or graph schemas. Preserve the existing store methods and transactional recording dedupe. This branch changes shared `server/main.py` only for agent lifecycle, passing skills to reflection, bridge status, and an expected-mission guard under the existing lock.
+API startup verifies the store and required uniqueness constraints, initializes only an empty graph, then connects BAND. Shutdown closes both. Failed startup closes the driver and never silently falls back to memory. Changing `LEARNER_ID` on another learner's graph fails without resetting data.
 
-When wiring live storage, replace the current `DEMO_MODE=false` startup guard with the Neo4j startup/cleanup lifecycle, retain `band_client.lifecycle()`, and report `services.storage=neo4j`. `/api/state` adds optional `services` metadata. The recording body remains `{recording_id,title}`; the optional expected-mission header asserts the binding, rather than allowing the client to select a mission.
+The recording body remains `{recording_id,title}`. `X-Expected-Mission-ID` asserts the existing binding or, for new evidence, the current mission. Atomic reflection updates save scores, vocabulary, evidence and next target together. Switching activities after completion retains history and prepares the next loop.
 
 ## Checks and real acceptance
 
 ```sh
+# Offline checks:
 make check
+# Optional real database proof; only a dedicated disposable database:
+NEO4J_TEST_URI=bolt://localhost:17687 NEO4J_TEST_PASSWORD=<test-password> make test-graph
 cd web && npm run build
 ```
 
