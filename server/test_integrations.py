@@ -176,6 +176,11 @@ class AgentProof(unittest.IsolatedAsyncioTestCase):
         def respond(request):
             prompt = json.loads(request.content)['messages'][0]['content']
             self.assertIn('demonstrated=[] and gaps=[]', prompt)
+            schema = json.loads(request.content)['response_format']['json_schema']['schema']
+            self.assertEqual(schema['properties']['mission_id']['enum'], [payload['mission']['id']])
+            self.assertEqual(schema['properties']['recording_id']['enum'], [payload['recording_id']])
+            self.assertEqual(schema['$defs']['ObservationSelection']['properties']['evidence_id']['enum'], [0])
+            self.assertEqual(set(schema['$defs']['NextTarget']['properties']['skill_id']['enum']), {s['id'] for s in payload['skills']})
             return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps(result)}}]})
         with patch.dict(os.environ, ENV):
             async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
@@ -337,6 +342,25 @@ class BridgeProof(unittest.TestCase):
             self.assertTrue(watcher.state.pending['missing'].exhausted)
             self.assertEqual(watcher.state.pending['missing'].mission_id, 'original')
             self.assertEqual(notices[-1][0], 'waiting')
+
+    def test_reflection_failure_retains_transcript_and_plaud_connection(self):
+        notices = []
+        response = httpx.Response(502, request=httpx.Request('POST', 'http://test/transcript'))
+        error = httpx.HTTPStatusError('Reflection failed', request=response.request, response=response)
+        def fail_submit(*args):
+            raise error
+        backend = SimpleNamespace(register=lambda *a: None, notify=lambda *a: notices.append(a),
+                                  submit=fail_submit)
+        with TemporaryDirectory() as directory:
+            watcher = bridge.Watcher(Path(directory) / 'state.json', backend)
+            watcher.state = bridge.BridgeState(seen=['new'], pending={
+                'new': bridge.PendingRecording(title='Practice', mission_id='original')})
+            with patch.object(bridge, 'list_recordings', return_value={}), \
+                    patch.object(bridge, 'read_transcript', return_value=SAMPLE_TRANSCRIPT):
+                watcher.poll()
+            self.assertIn('new', watcher.state.pending)
+            self.assertFalse(watcher.state.processed)
+            self.assertEqual(notices[-1][0], 'transcript_waiting')
 
     def test_cli_parsing_timeouts_and_transcript_readiness(self):
         self.assertEqual(bridge.parse_files(files_output({'id-1': 'Spanish practice'})), {'id-1': 'Spanish practice'})

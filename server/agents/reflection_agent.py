@@ -84,7 +84,16 @@ async def live_reflection(payload, client):
     excerpts = transcript_excerpts(payload['transcript'])
     model_payload = {**payload, 'transcript': [
         {'evidence_id': i, 'text': text} for i, text in enumerate(excerpts)]}
-    result = await generate(client, PROMPT, model_payload, ReflectionSelection)
+    schema = ReflectionSelection.model_json_schema()
+    schema['properties']['mission_id']['enum'] = [payload['mission']['id']]
+    schema['properties']['recording_id']['enum'] = [payload['recording_id']]
+    for name in ('ObservationSelection', 'GapSelection'):
+        schema['$defs'][name]['properties']['skill_id']['enum'] = sorted(known)
+    schema['$defs']['NextTarget']['properties']['skill_id']['enum'] = sorted(known)
+    for name in ('ObservationSelection', 'GapSelection', 'WordSelection'):
+        schema['$defs'][name]['properties']['evidence_id']['enum'] = list(range(len(excerpts)))
+    schema['$defs']['WordSelection']['properties']['word_id']['enum'] = [w['id'] for w in payload.get('words', [])]
+    result = await generate(client, PROMPT, model_payload, ReflectionSelection, schema=schema)
     if result.mission_id != payload['mission']['id'] or result.recording_id != payload['recording_id']:
         raise ValueError('Reflection returned mismatched mission or recording IDs')
     if not result.relevant and (result.success_score or result.demonstrated or result.gaps or result.word_evidence):

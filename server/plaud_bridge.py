@@ -262,7 +262,10 @@ class Watcher:
                 if not isinstance(exc, httpx.HTTPError) and pending.attempts >= self.max_attempts:
                     pending.exhausted = True
                 self.save()
-                self.backend.notify('error', f'PLAUD delivery pending ({type(exc).__name__}); check mission, BAND, and connectivity')
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 502:
+                    self.backend.notify('transcript_waiting', 'PLAUD connected; transcript retained while reflection retries. Progress changes only after validation.')
+                else:
+                    self.backend.notify('error', f'PLAUD delivery pending ({type(exc).__name__}); check mission, BAND, and connectivity')
 
 
 def main():

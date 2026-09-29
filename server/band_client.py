@@ -80,6 +80,8 @@ class ApplyLoopAdapter(SimpleAdapter):
                 except Exception as exc:
                     # Validation errors can echo transcript text; report only the category.
                     reply['error'] = f'BAND {self.kind} failed ({type(exc).__name__}); check credentials, model output, and connectivity'
+                    if type(exc) is ValueError and str(exc).startswith(('Reflection ', 'Irrelevant recording ')):
+                        reply['error'] = str(exc)
                     logger.warning('%s', reply['error'])
                 job.reply = reply
             await tools.send_message(MARKER + json.dumps(job.reply), mentions=[{'id': msg.sender_id}])
